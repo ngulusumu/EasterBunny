@@ -61,6 +61,7 @@ function createWindow() {
    setupAttackMonitoring();
    setupLogging();
 }
+
 function setupNetworkingEvents() {
     networkCoordinator.on('networking-started', (data) => {
         mainWindow.webContents.send('networking-started', data);
@@ -90,16 +91,39 @@ function setupAttackMonitoring() {
         mainWindow.webContents.send('resource-update', stats);
     });
 }
+
 async function setupLogging() {
-  const logLevel = process.env.NODE_ENV === 'development' ? 'debug' : 'info';
-  const logDir = path.join(__dirname, 'logs');
-  await fs.mkdir(logDir, { recursive: true }).catch((err) => console.error('Failed to create logs directory:', err));
-  const logPath = path.join(logDir, `mkenya-${new Date().toISOString().split('T')[0]}.log`);
-  setLogLevel(logLevel);
-  setLogFile(logPath);
-  logger.on('log', (logEntry) => {
-    mainWindow.webContents.send('log-message', logEntry);
-  });
+  try {
+    const logLevel = process.env.NODE_ENV === 'development' ? 'debug' : 'info';
+    
+    // Use app's user data directory for logs (writable location)
+    const logDir = path.join(app.getPath('userData'), 'logs');
+    
+    // Create logs directory if it doesn't exist
+    await fs.mkdir(logDir, { recursive: true });
+    
+    const logPath = path.join(logDir, `mkenya-${new Date().toISOString().split('T')[0]}.log`);
+    
+    setLogLevel(logLevel);
+    setLogFile(logPath);
+    
+    // Set up log message forwarding to renderer
+    if (logger && logger.on) {
+      logger.on('log', (logEntry) => {
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send('log-message', logEntry);
+        }
+      });
+    }
+    
+    console.log(`[INFO ${new Date().toISOString()}] Log level set to ${logLevel}`);
+    console.log(`[INFO ${new Date().toISOString()}] Logging to file: ${logPath}`);
+    
+  } catch (error) {
+    console.error('Failed to setup logging:', error);
+    // Fallback to console-only logging if file logging fails
+    setLogLevel(process.env.NODE_ENV === 'development' ? 'debug' : 'info');
+  }
 }
 
 app.whenReady().then(() => {

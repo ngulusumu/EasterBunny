@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGULUSUMU SEC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/themes.css">
+    <link rel="stylesheet" href="css/main.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a'
+                        },
+                        danger: { 500: '#ef4444', 600: '#dc2626' },
+                        success: { 500: '#10b981', 600: '#059669' }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s ease-in-out infinite',
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.8s ease-out',
+                        'glow': 'glow 2s ease-in-out infinite alternate'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen transition-all duration-500">
+    <!-- Background -->
+    <div class="fixed inset-0 bg-gradient-to-br from-primary-900 via-gray-900 to-black -z-10">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.03"%3E%3Ccircle cx="30" cy="30" r="1.5"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+    </div>
+
+    <!-- Navigation Header -->
+    <nav class="relative z-50 theme-card border-b border-gray-700/50 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center animate-glow">
+                        <span class="text-white font-bold text-sm">NG</span>
+                    </div>
+                    <h1 class="text-xl font-bold text-white">NGULUSUMU SEC</h1>
+                    <span class="px-2 py-1 bg-primary-500/20 text-primary-400 rounded-full text-xs">v2.1</span>
+                </div>
+                
+                <!-- System Status Indicator -->
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-sm">
+                        <div id="system-status-indicator" class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span id="system-status-text" class="text-gray-300">System Ready</span>
+                    </div>
+                    
+                    <!-- Advanced Settings Button -->
+                    <button id="advanced-settings-btn" 
+                            class="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-200"
+                            title="Advanced Settings">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Dashboard Header with Real-time System Stats -->
+        <div class="mb-8 animate-fade-in">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="text-3xl font-bold text-white mb-2">Network Testing Dashboard</h2>
+                    <p class="text-gray-400">Advanced tools for network testing and analysis</p>
+                </div>
+                <div class="text-right text-sm">
+                    <div class="text-gray-400">System Resources</div>
+                    <div class="flex items-center space-x-4 mt-1">
+                        <span class="text-white">CPU: <span id="header-cpu">0%</span></span>
+                        <span class="text-white">RAM: <span id="header-memory">0%</span></span>
+                        <span class="text-white">Attacks: <span id="header-attacks">0</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats Row -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 animate-slide-up">
+            <div class="theme-card rounded-xl p-6 backdrop-element">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Active Attacks</p>
+                        <p id="active-attacks-count" class="text-2xl font-bold text-white">0</p>
+                        <p id="attacks-status" class="text-xs text-gray-500">Ready to start</p>
+                    </div>
+                    <div class="w-12 h-12 bg-primary-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="theme-card rounded-xl p-6 backdrop-element">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Total Bandwidth</p>
+                        <p id="total-bandwidth" class="text-2xl font-bold text-white">0 B/s</p>
+                        <p id="bandwidth-peak" class="text-xs text-gray-500">Peak: 0 B/s</p>
+                    </div>
+                    <div class="w-12 h-12 bg-success-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="theme-card rounded-xl p-6 backdrop-element">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Network Peers</p>
+                        <p id="network-peers" class="text-2xl font-bold text-white">1</p>
+                        <p id="peer-status" class="text-xs text-gray-500">Local machine</p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="theme-card rounded-xl p-6 backdrop-element">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Success Rate</p>
+                        <p id="success-rate" class="text-2xl font-bold text-white">100%</p>
+                        <p id="total-requests" class="text-xs text-gray-500">0 requests</p>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Action Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Single Target Attack -->
+            <div class="theme-card rounded-xl p-6 backdrop-element animate-slide-up" style="animation-delay: 0.1s;">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-primary-500/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white">Single Target Attack</h3>
+                    </div>
+                    <button id="single-attack-info" class="text-gray-400 hover:text-white" title="Attack Information">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <form id="single-attack-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Target URL/IP</label>
+                        <input type="text" id="single-target" 
+                               class="theme-input w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-primary-500"
+                               placeholder="example.com:80 or 192.168.1.1:8080">
+                        <div id="single-target-validation" class="validation-message hidden"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Layer</label>
+                            <select id="single-layer" class="theme-input w-full px-4 py-3 rounded-lg">
+                                <option value="Layer7">Layer 7 (HTTP/HTTPS)</option>
+                                <option value="Layer4">Layer 4 (TCP/UDP)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Method</label>
+                            <select id="single-method" class="theme-input w-full px-4 py-3 rounded-lg">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="HEAD">HEAD</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                                <option value="SLOW">SLOW (Slowloris)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Duration (seconds)</label>
+                            <input type="number" id="single-duration" 
+                                   class="theme-input w-full px-4 py-3 rounded-lg"
+                                   min="1" max="3600" value="60">
+                            <div class="text-xs text-gray-500 mt-1">Max: 3600 seconds (1 hour)</div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                Threads 
+                                <span id="thread-recommendation" class="text-xs text-yellow-400"></span>
+                            </label>
+                            <input type="number" id="single-threads" 
+                                   class="theme-input w-full px-4 py-3 rounded-lg"
+                                   min="1" max="1000" value="50">
+                            <div id="single-threads-validation" class="validation-message hidden"></div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="single-attack-btn" 
+                            class="w-full theme-button px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            <span>Start Single Attack</span>
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Multi-Target Attack -->
+            <div class="theme-card rounded-xl p-6 backdrop-element animate-slide-up" style="animation-delay: 0.2s;">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-danger-500/20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-danger-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white">Multi-Target Attack</h3>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="upload-targets-btn" class="text-gray-400 hover:text-white" title="Upload Target List">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                        </button>
+                        <button id="multi-attack-info" class="text-gray-400 hover:text-white" title="Attack Information">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <form id="multi-attack-form" class="space-y-4">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-medium text-gray-300">Targets (one per line)</label>
+                            <span id="target-count" class="text-xs text-gray-400">0 targets</span>
+                        </div>
+                        <div class="relative">
+                            <textarea id="multi-targets" 
+                                      class="theme-input w-full px-4 py-3 rounded-lg h-32 resize-none"
+                                      placeholder="example1.com:80&#10;example2.com:443&#10;192.168.1.1:8080&#10;&#10;Or drag and drop a file here..."></textarea>
+                            <div id="drop-zone-overlay" class="absolute inset-0 border-2 border-dashed border-primary-500 bg-primary-500/10 rounded-lg hidden flex items-center justify-center">
+                                <div class="text-center">
+                                    <svg class="w-8 h-8 mx-auto mb-2 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                    </svg>
+                                    <p class="text-primary-400">Drop target list here</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="multi-targets-validation" class="validation-message hidden"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Layer</label>
+                            <select id="multi-layer" class="theme-input w-full px-4 py-3 rounded-lg">
+                                <option value="Layer7">Layer 7 (HTTP/HTTPS)</option>
+                                <option value="Layer4">Layer 4 (TCP/UDP)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Method</label>
+                            <select id="multi-method" class="theme-input w-full px-4 py-3 rounded-lg">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="HEAD">HEAD</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                                <option value="SLOW">SLOW (Slowloris)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Duration</label>
+                            <input type="number" id="multi-duration" 
+                                   class="theme-input w-full px-4 py-3 rounded-lg"
+                                   min="1" max="3600" value="120">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Threads/Target</label>
+                            <input type="number" id="multi-threads" 
+                                   class="theme-input w-full px-4 py-3 rounded-lg"
+                                   min="1" max="500" value="30">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Ramp Up (s)</label>
+                            <input type="number" id="multi-rampup" 
+                                   class="theme-input w-full px-4 py-3 rounded-lg"
+                                   min="0" max="300" value="10">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="multi-attack-btn" 
+                            class="w-full bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            </svg>
+                            <span>Start Multi-Target Attack</span>
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Enhanced Control Panel -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+            <!-- System Resources -->
+            <div class="lg:col-span-2 theme-card rounded-xl p-6 backdrop-element animate-slide-up" style="animation-delay: 0.3s;">
+                <h3 class="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>System Resources</span>
+                    <button id="resource-details-btn" class="text-gray-400 hover:text-white ml-auto">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                </h3>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-400">CPU Usage</span>
+                                <span id="cpu-usage" class="text-sm font-medium text-white">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div id="cpu-bar" class="bg-primary-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                Cores: <span id="cpu-cores">0</span> | 
+                                Load: <span id="cpu-load">0.0</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-400">Memory Usage</span>
+                                <span id="memory-usage" class="text-sm font-medium text-white">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div id="memory-bar" class="bg-success-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                Free: <span id="memory-free">0 GB</span> | 
+                                Total: <span id="memory-total">0 GB</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <h4 class="text-sm font-medium text-white mb-3">Performance Recommendations</h4>
+                        <div id="recommendations" class="space-y-2 text-sm">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                <span class="text-gray-300">System performance optimal</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proxy Management -->
+            <div class="theme-card rounded-xl p-6 backdrop-element animate-slide-up" style="animation-delay: 0.4s;">
+                <h3 class="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <span>Proxy Management</span>
+                </h3>
+
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                        <div>
+                            <span class="text-sm text-white font-medium">Use Proxies</span>
+                            <p class="text-xs text-gray-400">Route traffic through proxy servers</p>
+                        </div>
+                        <input type="checkbox" id="use-proxies" class="toggle-checkbox">
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-300">Proxy List</span>
+                            <div class="flex space-x-2">
+                                <button id="upload-proxies-btn" class="text-xs bg-primary-500/20 text-primary-400 px-2 py-1 rounded hover:bg-primary-500/30">
+                                    Upload
+                                </button>
+                                <button id="validate-proxies-btn" class="text-xs bg-success-500/20 text-success-400 px-2 py-1 rounded hover:bg-success-500/30">
+                                    Validate
+                                </button>
+                            </div>
+                        </div>
+                        <textarea id="proxy-list" 
+                                  class="theme-input w-full px-3 py-2 rounded-lg h-20 resize-none text-xs font-mono"
+                                  placeholder="proxy1.com:8080&#10;proxy2.com:3128:user:pass&#10;socks5://proxy3.com:1080"></textarea>
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span id="proxy-count">0 proxies</span>
+                            <span id="proxy-status">Ready</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-2">Rotation Strategy</label>
+                        <select id="proxy-rotation" class="theme-input w-full px-3 py-2 rounded-lg text-sm">
+                            <option value="round-robin">Round Robin</option>
+                            <option value="random">Random</option>
+                            <option value="performance-based">Performance Based</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="theme-card rounded-xl p-6 backdrop-element animate-slide-up" style="animation-delay: 0.5s;">
+                <h3 class="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <span>Quick Actions</span>
+                </h3>
+
+                <div class="space-y-3">
+                    <button id="stop-all-btn" 
+                            class="w-full bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm disabled:opacity-50"
+                            disabled>
+                        <span class="flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h6v4H9z"/>
+                            </svg>
+                            <span>Stop All Attacks</span>
+                        </span>
+                    </button>
+
+                    <button id="view-history-btn" 
+                            class="w-full theme-button-secondary px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm">
+                        <span class="flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>Attack History</span>
+                        </span>
+                    </button>
+
+                    <button id="export-data-btn" 
+                            class="w-full theme-button-secondary px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm">
+                        <span class="flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span>Export Results</span>
+                        </span>
+                    </button>
+
+                    <button id="system-info-btn" 
+                            class="w-full theme-button-secondary px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm">
+                        <span class="flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                            </svg>
+                            <span>System Info</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Activity Panel -->
+        <div class="theme-card rounded-xl p-6 backdrop-element animate-slide-up" style="animation-delay: 0.6s;">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-white flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Real-time Activity</span>
+                </h3>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-sm">
+                        <span class="text-gray-400">Auto-refresh:</span>
+                        <input type="checkbox" id="auto-refresh" class="toggle-checkbox" checked>
+                    </div>
+                    <button id="clear-logs-btn" class="text-gray-400 hover:text-white transition-colors duration-200" title="Clear Logs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-8a1 1 0 00-1 1v3m12 0a1 1 0 100-2h-2.5m-6 2h6"/>
+                        </svg>
+                    </button>
+                    <button id="auto-scroll-btn" class="text-primary-400 hover:text-white transition-colors duration-200" title="Auto Scroll">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                        </svg>
+                    </button>
+                    <button id="pause-logs-btn" class="text-gray-400 hover:text-white transition-colors duration-200" title="Pause Logs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Activity Tabs -->
+            <div class="flex space-x-1 mb-4 p-1 bg-gray-800/50 rounded-lg">
+                <button class="activity-tab active px-4 py-2 rounded-md text-sm font-medium transition-all duration-200" data-tab="attacks">
+                    Active Attacks <span id="attacks-tab-count" class="ml-2 px-2 py-0.5 bg-primary-500/20 text-primary-400 rounded-full text-xs">0</span>
+                </button>
+                <button class="activity-tab px-4 py-2 rounded-md text-sm font-medium transition-all duration-200" data-tab="logs">
+                    System Logs <span id="logs-tab-count" class="ml-2 px-2 py-0.5 bg-gray-500/20 text-gray-400 rounded-full text-xs">0</span>
+                </button>
+                <button class="activity-tab px-4 py-2 rounded-md text-sm font-medium transition-all duration-200" data-tab="network">
+                    Network Activity <span id="network-tab-count" class="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full text-xs">0</span>
+                </button>
+                <button class="activity-tab px-4 py-2 rounded-md text-sm font-medium transition-all duration-200" data-tab="performance">
+                    Performance Monitor
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="h-80 overflow-hidden">
+                <!-- Active Attacks Tab -->
+                <div id="attacks-tab" class="tab-content active h-full">
+                    <div id="active-attacks-list" class="space-y-3 h-full overflow-y-auto">
+                        <div class="text-center text-gray-400 py-8">
+                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            <p>No active attacks</p>
+                            <p class="text-sm">Start an attack to see real-time statistics</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Logs Tab -->
+                <div id="logs-tab" class="tab-content h-full hidden">
+                    <div id="system-logs" class="h-full overflow-y-auto space-y-1 font-mono text-sm">
+                        <div class="text-gray-400 text-xs flex items-center space-x-2">
+                            <span class="text-green-400">[INFO]</span>
+                            <span class="text-gray-500">${new Date().toLocaleTimeString()}</span>
+                            <span>System initialized - Ready for operations</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network Activity Tab -->
+                <div id="network-tab" class="tab-content h-full hidden">
+                    <div id="network-activity" class="h-full overflow-y-auto space-y-3">
+                        <div class="text-center text-gray-400 py-8">
+                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
+                            </svg>
+                            <p>No network activity</p>
+                            <p class="text-sm">Network monitoring will appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Tab -->
+                <div id="performance-tab" class="tab-content h-full hidden">
+                    <div class="h-full overflow-y-auto space-y-4">
+                        <div class="grid grid-cols-1 gap-4">
+                            <!-- Real-time Performance Chart Placeholder -->
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-white mb-3">Real-time Performance Graph</h4>
+                                <div id="performance-chart" class="h-32 bg-gray-900/50 rounded-lg flex items-center justify-center">
+                                    <span class="text-gray-500 text-sm">Performance data will be displayed here</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Network Statistics -->
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-white mb-3">Network Statistics</h4>
+                                <div class="grid grid-cols-2 gap-3 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Total Requests:</span>
+                                        <span id="total-requests-stat" class="text-white">0</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Failed Requests:</span>
+                                        <span id="failed-requests-stat" class="text-white">0</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Avg Response:</span>
+                                        <span id="avg-response-stat" class="text-white">0ms</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Data Sent:</span>
+                                        <span id="data-sent-stat" class="text-white">0 B</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
+
+    <!-- Modal Overlays -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+        <div id="modal-content" class="theme-card max-w-4xl w-full mx-4 rounded-xl p-6 backdrop-element transform scale-95 transition-transform duration-200 max-h-[90vh] overflow-y-auto">
+            <!-- Modal content will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-40 flex items-center justify-center">
+        <div class="theme-card rounded-xl p-8 backdrop-element text-center max-w-md w-full mx-4">
+            <div class="w-16 h-16 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <h3 class="text-lg font-semibold text-white mb-2">Processing Request</h3>
+            <p id="loading-text" class="text-gray-400 mb-4">Initializing attack parameters...</p>
+            <div class="w-full bg-gray-700 rounded-full h-2 mb-2">
+                <div id="loading-progress" class="bg-primary-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="text-xs text-gray-500">
+                <span id="loading-percentage">0%</span> complete
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Settings Side Panel -->
+    <div id="side-panel" class="fixed right-0 top-0 h-full w-96 bg-gray-900/95 backdrop-blur-md border-l border-gray-700/50 transform translate-x-full transition-transform duration-300 z-40">
+        <div class="p-6 h-full overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-white">Advanced Settings</h3>
+                <button id="close-panel-btn" class="text-gray-400 hover:text-white transition-colors duration-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Advanced Attack Options -->
+            <div class="mb-8">
+                <h4 class="text-lg font-medium text-white mb-4">Attack Configuration</h4>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                        <div>
+                            <span class="text-sm text-white font-medium">Rate Limit Bypass</span>
+                            <p class="text-xs text-gray-400">Attempt to bypass rate limiting</p>
+                        </div>
+                        <input type="checkbox" id="rate-limit-bypass" class="toggle-checkbox">
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                        <div>
+                            <span class="text-sm text-white font-medium">Keep Alive Connections</span>
+                            <p class="text-xs text-gray-400">Maintain persistent connections</p>
+                        </div>
+                        <input type="checkbox" id="keep-alive" class="toggle-checkbox">
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                        <div>
+                            <span class="text-sm text-white font-medium">Adaptive Scaling</span>
+                            <p class="text-xs text-gray-400">Automatically adjust based on system resources</p>
+                        </div>
+                        <input type="checkbox" id="adaptive-scaling" class="toggle-checkbox" checked>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Payload Size (bytes)</label>
+                        <input type="number" id="payload-size" 
+                               class="theme-input w-full px-3 py-2 rounded-lg text-sm"
+                               min="64" max="65536" value="1024">
+                        <div class="text-xs text-gray-500 mt-1">Range: 64 - 65,536 bytes</div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Request Timeout (ms)</label>
+                        <input type="number" id="request-timeout" 
+                               class="theme-input w-full px-3 py-2 rounded-lg text-sm"
+                               min="100" max="30000" value="5000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attack Presets -->
+            <div class="mb-8">
+                <h4 class="text-lg font-medium text-white mb-4">Attack Presets</h4>
+                <div class="space-y-2">
+                    <button class="preset-btn w-full text-left p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-200"
+                            data-preset="light">
+                        <div class="font-medium text-white">Light Test</div>
+                        <div class="text-sm text-gray-400">Low intensity • 10 threads • 30s duration</div>
+                    </button>
+                    <button class="preset-btn w-full text-left p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-200"
+                            data-preset="medium">
+                        <div class="font-medium text-white">Medium Load</div>
+                        <div class="text-sm text-gray-400">Balanced performance • 50 threads • 60s duration</div>
+                    </button>
+                    <button class="preset-btn w-full text-left p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-200"
+                            data-preset="heavy">
+                        <div class="font-medium text-white">Heavy Stress</div>
+                        <div class="text-sm text-gray-400">Maximum intensity • 100 threads • 120s duration</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Export/Import Options -->
+            <div>
+                <h4 class="text-lg font-medium text-white mb-4">Configuration Management</h4>
+                <div class="space-y-3">
+                    <button id="export-config-btn" class="w-full theme-button-secondary px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm">
+                        <span class="flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span>Export Configuration</span>
+                        </span>
+                    </button>
+                    <button id="import-config-btn" class="w-full theme-button-secondary px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm">
+                        <span class="flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <span>Import Configuration</span>
+                        </span>
+                    </button>
+                    <button id="reset-config-btn" class="w-full bg-danger-500/20 text-danger-400 hover:bg-danger-500/30 px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm">
+                        <span class="flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span>Reset to Defaults</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden File Inputs -->
+    <input type="file" id="proxy-file-input" accept=".txt,.list" style="display: none;">
+    <input type="file" id="targets-file-input" accept=".txt,.list" style="display: none;">
+    <input type="file" id="config-file-input" accept=".json" style="display: none;">
+
+    <!-- Scripts -->
+    <script src="js/themes.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script src="js/attack-manager.js"></script>
+    <script src="js/network-manager.js"></script>
+
+    <!-- Custom CSS -->
+    <style>
+        /* Toggle Switch Styling */
+        .toggle-checkbox {
+            appearance: none;
+            width: 3rem;
+            height: 1.5rem;
+            background-color: #374151;
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .toggle-checkbox:checked {
+            background-color: #3b82f6;
+        }
+
+        .toggle-checkbox::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 1.25rem;
+            height: 1.25rem;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .toggle-checkbox:checked::before {
+            transform: translateX(1.5rem);
+        }
+
+        /* Activity Tab Styling */
+        .activity-tab.active {
+            background: var(--bg-tertiary, rgba(59, 130, 246, 0.2));
+            color: var(--text-primary, #ffffff);
+        }
+
+        .activity-tab:not(.active) {
+            color: var(--text-muted, #9ca3af);
+        }
+
+        .activity-tab:not(.active):hover {
+            color: var(--text-secondary, #d1d5db);
+            background: var(--bg-secondary, rgba(55, 65, 81, 0.5));
+        }
+
+        /* Tab Content Transitions */
+        .tab-content {
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .tab-content:not(.active) {
+            display: none;
+            opacity: 0;
+        }
+
+        /* Custom Scrollbar */
+        .overflow-y-auto::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar-track {
+            background: rgba(55, 65, 81, 0.3);
+            border-radius: 3px;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+            background: rgba(75, 85, 99, 0.8);
+            border-radius: 3px;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background: rgba(107, 114, 128, 0.9);
+        }
+
+        /* Attack Card Animations */
+        .attack-card {
+            animation: slideInFromRight 0.5s ease-out;
+            background: rgba(31, 41, 55, 0.6);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        @keyframes slideInFromRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Status Badge Styling */
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-badge.running {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .status-badge.stopping {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .status-badge.stopped {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .status-badge.completed {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        /* Progress Bar Styling */
+        .progress-bar {
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            transition: width 0.3s ease-in-out;
+        }
+
+        /* Pulse Animation for Active Elements */
+        .pulse-active {
+            animation: pulseGlow 2s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% {
+                box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+            }
+        }
+
+        /* Modal Animations */
+        #modal-overlay.show #modal-content {
+            transform: scale(1);
+        }
+
+        /* Toast Notifications */
+        .toast {
+            animation: toastSlideIn 0.3s ease-out;
+        }
+
+        .toast.removing {
+            animation: toastSlideOut 0.3s ease-in;
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes toastSlideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Drag and Drop Styling */
+        .drag-over {
+            border-color: #3b82f6 !important;
+            background-color: rgba(59, 130, 246, 0.1) !important;
+        }
+
+        /* Validation Input Styling */
+        .form-input-error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 1px #ef4444 !important;
+        }
+
+        .form-input-success {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 1px #10b981 !important;
+        }
+
+        .form-input-warning {
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 0 1px #f59e0b !important;
+        }
+
+        .validation-message {
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .validation-message.error {
+            color: #ef4444;
+        }
+
+        .validation-message.success {
+            color: #10b981;
+        }
+
+        .validation-message.warning {
+            color: #f59e0b;
+        }
+
+        /* Error Shake Animation */
+        .error-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid rgba(59, 130, 246, 0.3);
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 2rem;
+            height: 2rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Theme Button Styling */
+        .theme-button {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+
+        .theme-button:hover {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+        }
+
+        .theme-button:disabled {
+            background: rgba(55, 65, 81, 0.5);
+            color: rgba(156, 163, 175, 0.5);
+        }
+
+        .theme-button-secondary {
+            background: rgba(55, 65, 81, 0.8);
+            color: #d1d5db;
+            border: 1px solid rgba(75, 85, 99, 0.5);
+        }
+
+        .theme-button-secondary:hover {
+            background: rgba(75, 85, 99, 0.8);
+            color: white;
+        }
+
+        .theme-input {
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            color: white;
+        }
+
+        .theme-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+        }
+
+        .theme-input::placeholder {
+            color: rgba(156, 163, 175, 0.7);
+        }
+
+        .theme-card {
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+
+        .backdrop-element {
+            backdrop-filter: blur(8px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #side-panel {
+                width: 100%;
+            }
+            
+            .grid.grid-cols-1.md\\:grid-cols-4 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            
+            .grid.grid-cols-1.lg\\:grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .grid.grid-cols-1.lg\\:grid-cols-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Dark mode enhancements */
+        @media (prefers-color-scheme: dark) {
+            .theme-card {
+                background: rgba(17, 24, 39, 0.9);
+            }
+            
+            .theme-input {
+                background: rgba(17, 24, 39, 0.9);
+            }
+        }
+    </style>
+
+    <!-- Additional JavaScript for Enhanced Functionality -->
+    <script>
+        // Global configuration object
+        window.appConfig = {
+            maxFileSize: 10 * 1024 * 1024, // 10MB
+            supportedFileTypes: {
+                targets: ['.txt', '.list'],
+                proxies: ['.txt', '.list'],
+                config: ['.json']
+            },
+            updateIntervals: {
+                system: 2000,
+                attacks: 1000,
+                network: 3000
+            },
+            maxLogs: 1000,
+            autoSave: true
+        };
+
+        // Initialize tooltips and enhanced UI features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize file input handlers
+            initializeFileInputs();
+            
+            // Initialize drag and drop
+            initializeDragAndDrop();
+            
+            // Initialize keyboard shortcuts
+            initializeKeyboardShortcuts();
+            
+            // Initialize real-time updates
+            initializeRealTimeUpdates();
+            
+            // Initialize validation
+            initializeValidation();
+            
+            console.log('Enhanced UI features initialized');
+        });
+
+        function initializeFileInputs() {
+            // Proxy file upload
+            document.getElementById('upload-proxies-btn').addEventListener('click', () => {
+                document.getElementById('proxy-file-input').click();
+            });
+
+            // Target file upload
+            document.getElementById('upload-targets-btn').addEventListener('click', () => {
+                document.getElementById('targets-file-input').click();
+            });
+
+            // Config file upload
+            document.getElementById('import-config-btn').addEventListener('click', () => {
+                document.getElementById('config-file-input').click();
+            });
+        }
+
+        function initializeDragAndDrop() {
+            const multiTargetsTextarea = document.getElementById('multi-targets');
+            const dropOverlay = document.getElementById('drop-zone-overlay');
+
+            multiTargetsTextarea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropOverlay.classList.remove('hidden');
+                multiTargetsTextarea.classList.add('drag-over');
+            });
+
+            multiTargetsTextarea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                if (!multiTargetsTextarea.contains(e.relatedTarget)) {
+                    dropOverlay.classList.add('hidden');
+                    multiTargetsTextarea.classList.remove('drag-over');
+                }
+            });
+
+            multiTargetsTextarea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropOverlay.classList.add('hidden');
+                multiTargetsTextarea.classList.remove('drag-over');
+                
+                const files = Array.from(e.dataTransfer.files);
+                if (files.length > 0 && files[0].type === 'text/plain') {
+                    handleFileUpload(files[0], 'targets');
+                }
+            });
+        }
+
+        function initializeKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ctrl+S - Save configuration
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    if (window.uiController) {
+                        window.uiController.saveCurrentConfiguration();
+                    }
+                }
+                
+                // Ctrl+O - Open configuration
+                if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+                    e.preventDefault();
+                    document.getElementById('config-file-input').click();
+                }
+                
+                // Space - Pause/Resume logs (when not in input)
+                if (e.key === ' ' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+                    e.preventDefault();
+                    if (window.uiController) {
+                        window.uiController.toggleLogsPause();
+                    }
+                }
+                
+                // Escape - Close modals/panels
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('modal-overlay');
+                    const sidePanel = document.getElementById('side-panel');
+                    
+                    if (modal && !modal.classList.contains('hidden')) {
+                        if (window.uiController) {
+                            window.uiController.closeModal();
+                        }
+                    } else if (sidePanel && !sidePanel.classList.contains('translate-x-full')) {
+                        if (window.uiController) {
+                            window.uiController.closeSidePanel();
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeRealTimeUpdates() {
+            // Update target count in real-time
+            const multiTargetsTextarea = document.getElementById('multi-targets');
+            const targetCountSpan = document.getElementById('target-count');
+            
+            multiTargetsTextarea.addEventListener('input', () => {
+                const targets = multiTargetsTextarea.value.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+                targetCountSpan.textContent = `${targets.length} targets`;
+            });
+
+            // Update proxy count in real-time
+            const proxyListTextarea = document.getElementById('proxy-list');
+            const proxyCountSpan = document.getElementById('proxy-count');
+            
+            proxyListTextarea.addEventListener('input', () => {
+                const proxies = proxyListTextarea.value.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+                proxyCountSpan.textContent = `${proxies.length} proxies`;
+            });
+        }
+
+        function initializeValidation() {
+            // Real-time validation for single target
+            const singleTargetInput = document.getElementById('single-target');
+            singleTargetInput.addEventListener('input', debounce(() => {
+                validateTarget(singleTargetInput);
+            }, 300));
+
+            // Real-time validation for threads
+            const threadInputs = ['single-threads', 'multi-threads'];
+            threadInputs.forEach(id => {
+                const input = document.getElementById(id);
+                input.addEventListener('input', debounce(() => {
+                    validateThreadCount(input);
+                }, 300));
+            });
+        }
+
+        function validateTarget(input) {
+            const target = input.value.trim();
+            if (!target) {
+                setValidationState(input, 'neutral');
+                return;
+            }
+
+            // Basic URL/IP validation
+            const urlPattern = /^([a-zA-Z0-9.-]+):(\d+)$/;
+            const ipPattern = /^(\d{1,3}\.){3}\d{1,3}:\d+$/;
+            
+            if (urlPattern.test(target) || ipPattern.test(target)) {
+                setValidationState(input, 'success', 'Valid target format');
+            } else {
+                setValidationState(input, 'error', 'Invalid format. Use domain:port or IP:port');
+            }
+        }
+
+        function validateThreadCount(input) {
+            const value = parseInt(input.value);
+            const min = parseInt(input.min);
+            const max = parseInt(input.max);
+
+            if (isNaN(value) || value < min || value > max) {
+                setValidationState(input, 'error', `Must be between ${min} and ${max}`);
+            } else {
+                setValidationState(input, 'success');
+            }
+        }
+
+        function setValidationState(element, state, message = '') {
+            // Remove existing validation classes
+            element.classList.remove('form-input-error', 'form-input-success', 'form-input-warning');
+
+            // Add new validation class
+            if (state === 'error') {
+                element.classList.add('form-input-error');
+            } else if (state === 'success') {
+                element.classList.add('form-input-success');
+            } else if (state === 'warning') {
+                element.classList.add('form-input-warning');
+            }
+
+            // Update validation message
+            updateValidationMessage(element, message, state);
+        }
+
+        function updateValidationMessage(element, message, state) {
+            let messageEl = element.parentNode.querySelector('.validation-message');
+            
+            if (message) {
+                if (!messageEl) {
+                    messageEl = document.createElement('div');
+                    messageEl.className = 'validation-message';
+                    element.parentNode.appendChild(messageEl);
+                }
+                messageEl.textContent = message;
+                messageEl.className = `validation-message ${state}`;
+            } else if (messageEl) {
+                messageEl.remove();
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function handleFileUpload(file, type) {
+            if (file.size > window.appConfig.maxFileSize) {
+                showNotification('File too large. Maximum size is 10MB.', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                if (type === 'targets') {
+                    processTargetFile(content, file.name);
+                } else if (type === 'proxies') {
+                    processProxyFile(content, file.name);
+                } else if (type === 'config') {
+                    processConfigFile(content, file.name);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function processTargetFile(content, filename) {
+            const targets = content.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0 && !line.startsWith('#'));
+            
+            document.getElementById('multi-targets').value = targets.join('\n');
+            document.getElementById('target-count').textContent = `${targets.length} targets`;
+            showNotification(`Loaded ${targets.length} targets from ${filename}`, 'success');
+        }
+
+        function processProxyFile(content, filename) {
+            const proxies = content.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0 && !line.startsWith('#'));
+            
+            document.getElementById('proxy-list').value = proxies.join('\n');
+            document.getElementById('proxy-count').textContent = `${proxies.length} proxies`;
+            showNotification(`Loaded ${proxies.length} proxies from ${filename}`, 'success');
+        }
+
+        function processConfigFile(content, filename) {
+            try {
+                const config = JSON.parse(content);
+                // Apply configuration through UI controller
+                if (window.uiController) {
+                    window.uiController.applyConfiguration(config);
+                    showNotification(`Configuration loaded from ${filename}`, 'success');
+                }
+            } catch (error) {
+                showNotification(`Invalid configuration file: ${error.message}`, 'error');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            // Use existing notification system if available
+            if (window.uiController) {
+                window.uiController.showNotification(message, type);
+            } else {
+                // Fallback notification
+                console.log(`[${type.toUpperCase()}] ${message}`);
+            }
+        }
+    </script>
+</body>
+</html>

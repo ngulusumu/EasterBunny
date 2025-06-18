@@ -1,0 +1,25 @@
+# Node modules and build artifacts
+node_modules/
+dist/
+package-lock.json
+
+# Logs
+logs/
+*.log
+**logs
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# VS Code settings (optional)
+.vscode/
+
+# Env files (if you use them)
+.env
+.env.local
+
+cleaner/

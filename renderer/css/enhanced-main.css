@@ -1,0 +1,569 @@
+/* Enhanced Main Interface Styles - Form Validation & Interactions */
+
+/* Form validation states */
+.form-input-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+    background-color: rgba(239, 68, 68, 0.05);
+}
+
+.form-input-success {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+    background-color: rgba(16, 185, 129, 0.05);
+}
+
+.form-input-warning {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1) !important;
+    background-color: rgba(245, 158, 11, 0.05);
+}
+
+.validation-message {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    font-weight: 500;
+}
+
+/* Enhanced file upload areas */
+.file-drop-zone {
+    border: 2px dashed var(--border-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+}
+
+.file-drop-zone:hover,
+.file-drop-zone.drag-over {
+    border-color: var(--accent-primary);
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.file-drop-zone.drag-over {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* Enhanced button states */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.btn-loading span {
+    opacity: 0;
+}
+
+/* Status indicators with enhanced animations */
+.status-indicator-enhanced {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-indicator-enhanced::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: currentColor;
+}
+
+.status-indicator-enhanced.pulsing::before {
+    animation: statusPulse 2s infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+/* Enhanced progress bars */
+.progress-enhanced {
+    position: relative;
+    background: var(--bg-tertiary);
+    border-radius: 9999px;
+    overflow: hidden;
+    height: 8px;
+}
+
+.progress-enhanced .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
+    background-size: 200% 100%;
+    border-radius: inherit;
+    transition: width 0.5s ease-in-out;
+    animation: progressShimmer 2s ease-in-out infinite;
+}
+
+@keyframes progressShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.progress-enhanced .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Enhanced modal animations */
+.modal-enhanced {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-enhanced.show {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+
+.modal-backdrop-enhanced {
+    backdrop-filter: blur(8px) saturate(150%);
+    background: rgba(0, 0, 0, 0.6);
+    transition: all 0.3s ease-in-out;
+}
+
+/* Enhanced theme transitions */
+.theme-transition {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="kenyan"] .theme-transition {
+    transition-duration: 0.5s;
+}
+
+/* Enhanced card interactions */
+.card-interactive {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.card-interactive:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-lg);
+}
+
+.card-interactive:active {
+    transform: translateY(0) scale(1);
+    transition-duration: 0.1s;
+}
+
+/* Enhanced attack cards with real-time updates */
+.attack-card-enhanced {
+    background: var(--bg-card);
+    border: 1px solid var(--border-secondary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
+.attack-card-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--accent-primary);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease-in-out;
+}
+
+.attack-card-enhanced.active::before {
+    transform: scaleX(1);
+    background: linear-gradient(90deg, #3b82f6, #10b981, #f59e0b);
+    animation: attackProgress 3s ease-in-out infinite;
+}
+
+@keyframes attackProgress {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.attack-card-enhanced .attack-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.attack-card-enhanced .metric-item {
+    text-align: center;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.attack-card-enhanced .metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.attack-card-enhanced .metric-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+/* Enhanced network visualization */
+.network-graph {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.network-node {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--accent-primary);
+    border-radius: 50%;
+    border: 2px solid var(--bg-primary);
+    transition: all 0.3s ease-in-out;
+}
+
+.network-node.active {
+    animation: networkPulse 2s infinite;
+    box-shadow: 0 0 15px var(--accent-primary);
+}
+
+.network-node.self {
+    width: 14px;
+    height: 14px;
+    background: var(--accent-secondary);
+    box-shadow: 0 0 20px var(--accent-secondary);
+}
+
+@keyframes networkPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.3);
+        opacity: 0.7;
+    }
+}
+
+.network-connection {
+    position: absolute;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+    opacity: 0.6;
+    animation: connectionFlow 3s ease-in-out infinite;
+}
+
+@keyframes connectionFlow {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+}
+
+/* Enhanced log display */
+.log-container {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.log-entry-enhanced {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-secondary);
+    transition: background-color 0.2s ease-in-out;
+}
+
+.log-entry-enhanced:hover {
+    background-color: var(--bg-tertiary);
+}
+
+.log-entry-enhanced:last-child {
+    border-bottom: none;
+}
+
+.log-timestamp {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    min-width: 80px;
+    font-weight: 500;
+}
+
+.log-level {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    min-width: 60px;
+}
+
+.log-level.info { color: #3b82f6; }
+.log-level.warn { color: #f59e0b; }
+.log-level.error { color: #ef4444; }
+.log-level.success { color: #10b981; }
+.log-level.debug { color: #6b7280; }
+
+.log-message {
+    flex: 1;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+/* Enhanced notifications/toasts */
+.toast-enhanced {
+    background: var(--bg-card);
+    border: 1px solid var(--border-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(8px);
+    min-width: 320px;
+    max-width: 480px;
+}
+
+.toast-enhanced.success {
+    border-left: 4px solid #10b981;
+}
+
+.toast-enhanced.error {
+    border-left: 4px solid #ef4444;
+}
+
+.toast-enhanced.warning {
+    border-left: 4px solid #f59e0b;
+}
+
+.toast-enhanced.info {
+    border-left: 4px solid #3b82f6;
+}
+
+/* Enhanced side panel */
+.side-panel-enhanced {
+    background: var(--bg-primary);
+    border-left: 1px solid var(--border-secondary);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+}
+
+[data-theme="blur"] .side-panel-enhanced {
+    background: rgba(26, 26, 26, 0.8);
+    backdrop-filter: blur(12px);
+}
+
+/* Enhanced loading states */
+.skeleton-loader {
+    background: linear-gradient(90deg, 
+        var(--bg-secondary) 25%, 
+        var(--bg-tertiary) 50%, 
+        var(--bg-secondary) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes skeletonShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.loading-dots {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.loading-dots::after {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: loadingDots 1.4s ease-in-out infinite both;
+}
+
+.loading-dots::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-right: 4px;
+    animation: loadingDots 1.4s ease-in-out infinite both;
+    animation-delay: -0.32s;
+}
+
+@keyframes loadingDots {
+    0%, 80%, 100% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    40% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Enhanced responsive design */
+@media (max-width: 768px) {
+    .attack-card-enhanced {
+        padding: 1rem;
+    }
+    
+    .attack-card-enhanced .attack-metrics {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .network-graph {
+        height: 150px;
+    }
+    
+    .toast-enhanced {
+        min-width: 280px;
+        max-width: calc(100vw - 2rem);
+    }
+    
+    .log-entry-enhanced {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .log-timestamp,
+    .log-level {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .attack-card-enhanced .metric-item {
+        padding: 0.5rem;
+    }
+    
+    .attack-card-enhanced .metric-value {
+        font-size: 1rem;
+    }
+    
+    .network-node {
+        width: 8px;
+        height: 8px;
+    }
+    
+    .network-node.self {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+/* Enhanced accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .attack-card-enhanced::before,
+    .network-node.active,
+    .network-connection,
+    .progress-enhanced .progress-fill,
+    .skeleton-loader {
+        animation: none !important;
+    }
+    
+    .card-interactive:hover {
+        transform: none;
+    }
+    
+    .modal-enhanced {
+        transition: opacity 0.2s ease-in-out;
+        transform: none !important;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .attack-card-enhanced,
+    .log-container,
+    .toast-enhanced {
+        border-width: 2px;
+    }
+    
+    .network-node {
+        border-width: 3px;
+    }
+    
+    .form-input-error,
+    .form-input-success,
+    .form-input-warning {
+        border-width: 2px !important;
+    }
+}
+
+/* Focus management for keyboard navigation */
+.focus-ring {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.keyboard-nav-active *:focus {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+    .attack-card-enhanced,
+    .log-container,
+    .network-graph {
+        break-inside: avoid;
+        border: 1px solid #000;
+        background: white !important;
+        color: black !important;
+    }
+    
+    .side-panel-enhanced,
+    .toast-enhanced,
+    .modal-enhanced {
+        display: none !important;
+    }
+    
+    .attack-card-enhanced::before {
+        display: none;
+    }
+}

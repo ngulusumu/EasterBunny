@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGULUSUMU SEC - Loading</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- External CSS Files -->
+    <link rel="stylesheet" href="./css/themes.css">
+    <link rel="stylesheet" href="./css/loading.css">
+</head>
+<body class="min-h-screen overflow-hidden">
+    <!-- Background with Fixed Image Switching -->
+    <div class="absolute inset-0">
+        <!-- Left side (ngulusumuF and ngulusumuM switching) -->
+        <div class="absolute top-0 left-0 w-1/2 h-full overflow-hidden">
+            <div id="left-image-f" class="bg-image opacity-80" 
+                 style="background-image: url('./images/ngulusumuF.jpg');">
+                 <!-- Fallback if image doesn't load -->
+                 <div class="absolute inset-0 bg-gradient-to-br from-red-900 to-green-900 opacity-50"></div>
+            </div>
+            <div id="left-image-m" class="bg-image opacity-0" 
+                 style="background-image: url('./images/ngulusumuM.jpg');">
+                 <!-- Fallback if image doesn't load -->
+                 <div class="absolute inset-0 bg-gradient-to-br from-green-900 to-red-900 opacity-50"></div>
+            </div>
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/70"></div>
+        </div>
+        
+        <!-- Right side (siahKE fixed, no switching) -->
+        <div class="absolute top-0 right-0 w-1/2 h-full overflow-hidden">
+            <div id="right-image-siah" class="bg-image opacity-90" 
+                 style="background-image: url('./images/siahKE.jpg');">
+                 <!-- Fallback if image doesn't load -->
+                 <div class="absolute inset-0 bg-gradient-to-bl from-blue-900 to-gray-900 opacity-70"></div>
+            </div>
+            <div class="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-black/70"></div>
+        </div>
+        
+        <!-- Center blend overlay - reduced opacity to show both sides -->
+        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-black/70 to-transparent"></div>
+        
+        <!-- Pattern overlay -->
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.03"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+        
+        <!-- Final gradient overlay - lighter to show images better -->
+        <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30"></div>
+        
+        <!-- Floating Particles -->
+        <div class="particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+        </div>
+    </div>
+
+    <!-- Theme selector (top-right) -->
+    <div class="absolute top-6 right-6 z-50">
+        <div class="theme-selector">
+            <div class="theme-option dark active" onclick="setTheme('dark')" title="Dark Theme"></div>
+            <div class="theme-option blur" onclick="setTheme('blur')" title="Blur Theme"></div>
+            <div class="theme-option kenyan" onclick="setTheme('kenyan')" title="Kenyan Theme"></div>
+        </div>
+    </div>
+
+    <!-- Main loading container -->
+    <div class="relative z-10 min-h-screen flex items-center justify-center p-8">
+        <div class="text-center space-y-8 max-w-md w-full loading-container rounded-2xl p-8">
+            
+            <!-- Logo/Brand Section -->
+            <div class="animate-fade-in logo-container">
+                <div class="logo-bg-effect"></div>
+                <div class="relative inline-block">
+                    <!-- Main logo circle -->
+                    <div class="w-24 h-24 mx-auto mb-4 relative">
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-blue-700 animate-spin-slow opacity-80"></div>
+                        <div class="absolute inset-2 rounded-full bg-gray-900 flex items-center justify-center">
+                            <div class="text-2xl font-bold text-blue-400 animate-glow">NS</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Orbiting dots -->
+                    <div class="absolute inset-0 animate-spin-slow">
+                        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-400 rounded-full animate-pulse-fast"></div>
+                        <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-red-500 rounded-full animate-pulse-fast" style="animation-delay: 0.5s;"></div>
+                        <div class="absolute left-0 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-green-400 rounded-full animate-pulse-fast" style="animation-delay: 1s;"></div>
+                        <div class="absolute right-0 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-yellow-400 rounded-full animate-pulse-fast" style="animation-delay: 1.5s;"></div>
+                    </div>
+                </div>
+
+                <h1 class="text-4xl font-bold text-white mb-2 animate-slide-up drop-shadow-lg">
+                    NGULUSUMU SEC
+                </h1>
+                <p class="text-gray-300 text-lg animate-slide-up drop-shadow-md" style="animation-delay: 0.2s;">
+                    Advanced Network Jacker
+                </p>
+                
+                <!-- Kenyan flag stripe -->
+                <div class="kenyan-flag-stripe mx-auto w-32 mt-4" style="animation-delay: 0.4s;"></div>
+            </div>
+
+            <!-- Loading progress -->
+            <div class="space-y-6 animate-fade-in" style="animation-delay: 0.4s;">
+                <!-- Progress bar -->
+                <div class="progress-container w-full bg-gray-700/50 rounded-full h-2 overflow-hidden backdrop-blur-sm">
+                    <div id="progress-bar" class="h-full progress-bar rounded-full transition-all duration-300 ease-out animate-glow" style="width: 0%"></div>
+                    <div class="progress-glow"></div>
+                </div>
+                
+                <!-- Loading percentage -->
+                <div class="flex justify-between items-center text-sm text-gray-300">
+                    <span id="loading-status" class="loading-text">Initializing systems</span>
+                    <span id="loading-percentage">0%</span>
+                </div>
+            </div>
+
+            <!-- Loading stages -->
+            <div class="space-y-3 animate-fade-in" style="animation-delay: 0.6s;">
+                <div class="flex items-center space-x-3 text-gray-400">
+                    <div id="check-1" class="stage-indicator w-4 h-4 rounded-full bg-gray-600 transition-all duration-300"></div>
+                    <span id="stage-1">System Information</span>
+                </div>
+                <div class="flex items-center space-x-3 text-gray-400">
+                    <div id="check-2" class="stage-indicator w-4 h-4 rounded-full bg-gray-600 transition-all duration-300"></div>
+                    <span id="stage-2">Network Coordinator</span>
+                </div>
+                <div class="flex items-center space-x-3 text-gray-400">
+                    <div id="check-3" class="stage-indicator w-4 h-4 rounded-full bg-gray-600 transition-all duration-300"></div>
+                    <span id="stage-3">Security Engine</span>
+                </div>
+                <div class="flex items-center space-x-3 text-gray-400">
+                    <div id="check-4" class="stage-indicator w-4 h-4 rounded-full bg-gray-600 transition-all duration-300"></div>
+                    <span id="stage-4">Security Protocols</span>
+                </div>
+                <div class="flex items-center space-x-3 text-gray-400">
+                    <div id="check-5" class="stage-indicator w-4 h-4 rounded-full bg-gray-600 transition-all duration-300"></div>
+                    <span id="stage-5">Final Checks</span>
+                </div>
+            </div>
+
+            <!-- Error display -->
+            <div id="error-container" class="hidden bg-red-500/20 border border-red-500/50 rounded-lg p-4 backdrop-blur-sm">
+                <div class="flex items-center space-x-2 text-red-400">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span id="error-message">Loading failed</span>
+                </div>
+                <button onclick="retryLoading()" class="mt-3 px-4 py-2 theme-button-outline text-sm rounded-lg transition-colors duration-200">
+                    Retry
+                </button>
+            </div>
+
+            <!-- Skip button (appears after 5 seconds) -->
+            <div id="skip-container" class="hidden animate-fade-in">
+                <button onclick="skipToMain()" class="skip-button px-6 py-2 theme-button-secondary rounded-lg">
+                    Skip to Main Interface
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom info -->
+    <div class="absolute bottom-6 left-6 right-6 z-10">
+        <div class="flex justify-between items-center text-gray-400 text-sm loading-container rounded-lg px-4 py-2">
+            <div class="flex items-center space-x-4">
+                <span>Version 2.0.0</span>
+                <span>•</span>
+                <div class="kenyan-flag-stripe w-8 h-1"></div>
+                <span>•</span>
+                <span id="system-info">Loading system info...</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 status-online rounded-full animate-pulse-fast"></div>
+                <span>Online</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript -->
+    <script src="./js/loading.js"></script>
+</body>
+</html>

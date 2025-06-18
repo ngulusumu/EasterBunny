@@ -1,0 +1,668 @@
+/* Theme System - Dark, Blur, and Kenyan Flag Inspired themes */
+
+/* CSS Custom Properties for themes */
+:root {
+  --transition-fast: 150ms;
+  --transition-normal: 300ms;
+  --transition-slow: 500ms;
+  --blur-sm: 4px;
+  --blur-md: 8px;
+  --blur-lg: 16px;
+  --blur-xl: 24px;
+  
+  /* Kenyan Flag Color Palette */
+  --kenyan-black: #000000;
+  --kenyan-red: #cf2027;
+  --kenyan-green: #006633;
+  --kenyan-white: #ffffff;
+  --kenyan-red-dark: #a61c22;
+  --kenyan-green-dark: #004d26;
+  --kenyan-red-light: #e53e3e;
+  --kenyan-green-light: #38a169;
+}
+
+/* Dark Theme (Kenyan Flag Inspired) */
+[data-theme="dark"] {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #2d2d2d;
+  --bg-card: rgba(26, 26, 26, 0.9);
+  --bg-overlay: rgba(0, 0, 0, 0.8);
+  
+  --text-primary: #ffffff;
+  --text-secondary: #e2e2e2;
+  --text-muted: #9a9a9a;
+  --text-accent: var(--kenyan-red);
+  
+  --border-primary: #404040;
+  --border-secondary: #2d2d2d;
+  --border-accent: var(--kenyan-red);
+  
+  --accent-primary: var(--kenyan-red);
+  --accent-secondary: var(--kenyan-green);
+  --accent-tertiary: var(--kenyan-white);
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7);
+  
+  --gradient-primary: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  --gradient-accent: linear-gradient(135deg, var(--kenyan-red) 0%, var(--kenyan-red-dark) 100%);
+  --gradient-secondary: linear-gradient(135deg, var(--kenyan-green) 0%, var(--kenyan-green-dark) 100%);
+  --gradient-kenyan: linear-gradient(135deg, var(--kenyan-black) 0%, var(--kenyan-red) 50%, var(--kenyan-green) 100%);
+  --gradient-danger: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  --gradient-success: linear-gradient(135deg, var(--kenyan-green) 0%, var(--kenyan-green-dark) 100%);
+}
+
+/* Blur Theme (Kenyan Flag Inspired with Glass Effect) */
+[data-theme="blur"] {
+  --bg-primary: rgba(10, 10, 10, 0.7);
+  --bg-secondary: rgba(26, 26, 26, 0.6);
+  --bg-tertiary: rgba(45, 45, 45, 0.5);
+  --bg-card: rgba(26, 26, 26, 0.3);
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+  
+  --text-primary: #ffffff;
+  --text-secondary: #e2e2e2;
+  --text-muted: #b8b8b8;
+  --text-accent: var(--kenyan-red-light);
+  
+  --border-primary: rgba(64, 64, 64, 0.6);
+  --border-secondary: rgba(45, 45, 45, 0.4);
+  --border-accent: rgba(207, 32, 39, 0.8);
+  
+  --accent-primary: var(--kenyan-red-light);
+  --accent-secondary: var(--kenyan-green-light);
+  --accent-tertiary: var(--kenyan-white);
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  
+  --gradient-primary: linear-gradient(135deg, rgba(26, 26, 26, 0.6) 0%, rgba(10, 10, 10, 0.7) 100%);
+  --gradient-accent: linear-gradient(135deg, rgba(207, 32, 39, 0.6) 0%, rgba(166, 28, 34, 0.8) 100%);
+  --gradient-secondary: linear-gradient(135deg, rgba(0, 102, 51, 0.6) 0%, rgba(0, 77, 38, 0.8) 100%);
+  --gradient-kenyan: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(207, 32, 39, 0.6) 50%, rgba(0, 102, 51, 0.6) 100%);
+  --gradient-danger: linear-gradient(135deg, rgba(220, 38, 38, 0.6) 0%, rgba(153, 27, 27, 0.8) 100%);
+  --gradient-success: linear-gradient(135deg, rgba(0, 102, 51, 0.6) 0%, rgba(0, 77, 38, 0.8) 100%);
+}
+
+/* Kenyan Theme (Special ceremonial theme) */
+[data-theme="kenyan"] {
+  --bg-primary: var(--kenyan-black);
+  --bg-secondary: #1a0000;
+  --bg-tertiary: #001a00;
+  --bg-card: rgba(0, 0, 0, 0.9);
+  --bg-overlay: rgba(0, 0, 0, 0.8);
+  
+  --text-primary: var(--kenyan-white);
+  --text-secondary: #f0f0f0;
+  --text-muted: #cccccc;
+  --text-accent: var(--kenyan-red);
+  
+  --border-primary: var(--kenyan-red);
+  --border-secondary: var(--kenyan-green);
+  --border-accent: var(--kenyan-white);
+  
+  --accent-primary: var(--kenyan-red);
+  --accent-secondary: var(--kenyan-green);
+  --accent-tertiary: var(--kenyan-white);
+  
+  --shadow-sm: 0 1px 2px 0 rgba(207, 32, 39, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(207, 32, 39, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(207, 32, 39, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(207, 32, 39, 0.6);
+  
+  --gradient-primary: var(--gradient-kenyan);
+  --gradient-accent: linear-gradient(135deg, var(--kenyan-red) 0%, var(--kenyan-red-dark) 100%);
+  --gradient-secondary: linear-gradient(135deg, var(--kenyan-green) 0%, var(--kenyan-green-dark) 100%);
+  --gradient-kenyan: linear-gradient(to right, var(--kenyan-black) 0%, var(--kenyan-red) 33%, var(--kenyan-white) 50%, var(--kenyan-green) 67%, var(--kenyan-black) 100%);
+  --gradient-danger: linear-gradient(135deg, var(--kenyan-red) 0%, #8b0000 100%);
+  --gradient-success: linear-gradient(135deg, var(--kenyan-green) 0%, #003300 100%);
+}
+
+/* Blur theme specific backdrop filters */
+[data-theme="blur"] .backdrop-element {
+  backdrop-filter: blur(var(--blur-md)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(180%);
+}
+
+[data-theme="blur"] .backdrop-element-sm {
+  backdrop-filter: blur(var(--blur-sm)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-sm)) saturate(180%);
+}
+
+[data-theme="blur"] .backdrop-element-lg {
+  backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+}
+
+/* Theme-aware component styles */
+.theme-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal) ease-in-out;
+}
+
+.theme-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.theme-card.kenyan-accent {
+  border-image: var(--gradient-kenyan) 1;
+  border-width: 2px;
+  border-style: solid;
+}
+
+.theme-button {
+  background: var(--gradient-accent);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast) ease-in-out;
+}
+
+.theme-button:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.theme-button:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-button-kenyan {
+  background: var(--gradient-kenyan);
+  color: var(--kenyan-white);
+  border: 2px solid var(--kenyan-red);
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-button-kenyan::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.theme-button-kenyan:hover::before {
+  left: 100%;
+}
+
+.theme-button-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+  transition: all var(--transition-fast) ease-in-out;
+}
+
+.theme-button-secondary:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-accent);
+}
+
+.theme-button-outline {
+  background: transparent;
+  color: var(--accent-primary);
+  border: 2px solid var(--accent-primary);
+  transition: all var(--transition-fast) ease-in-out;
+}
+
+.theme-button-outline:hover {
+  background: var(--accent-primary);
+  color: var(--kenyan-white);
+}
+
+.theme-input {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+  transition: all var(--transition-fast) ease-in-out;
+}
+
+.theme-input:focus {
+  outline: none;
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 3px rgba(207, 32, 39, 0.1);
+}
+
+.theme-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Kenyan flag elements */
+.kenyan-flag-stripe {
+  height: 4px;
+  background: var(--gradient-kenyan);
+  margin: 8px 0;
+  animation: flag-wave 3s ease-in-out infinite;
+}
+
+@keyframes flag-wave {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(1.02); }
+}
+
+.kenyan-shield {
+  background: var(--kenyan-red);
+  border: 2px solid var(--kenyan-white);
+  position: relative;
+}
+
+.kenyan-shield::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60%;
+  height: 60%;
+  background: var(--kenyan-green);
+  border-radius: 50%;
+}
+
+/* Progress bars with Kenyan theme */
+.progress-kenyan {
+  background: var(--kenyan-black);
+  border: 1px solid var(--kenyan-red);
+}
+
+.progress-kenyan .progress-fill {
+  background: var(--gradient-kenyan);
+  animation: kenyan-progress 2s ease-in-out infinite;
+}
+
+@keyframes kenyan-progress {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Theme selector buttons */
+.theme-selector {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  border: 1px solid var(--border-secondary);
+}
+
+.theme-option {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-option.dark {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+}
+
+.theme-option.blur {
+  background: linear-gradient(135deg, rgba(10, 10, 10, 0.7) 0%, rgba(26, 26, 26, 0.6) 100%);
+  backdrop-filter: blur(8px);
+}
+
+.theme-option.kenyan {
+  background: var(--gradient-kenyan);
+  background-size: 300% 100%;
+  animation: kenyan-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes kenyan-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.theme-option.active {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(207, 32, 39, 0.3);
+  transform: scale(1.1);
+}
+
+.theme-option:hover {
+  transform: scale(1.05);
+  border-color: var(--border-accent);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes glow {
+  from {
+    text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+  }
+  to {
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes rotate-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes kenyan-pride {
+  0% { 
+    background-position: 0% 50%;
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.05);
+  }
+  50% { 
+    background-position: 100% 50%;
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+  100% { 
+    background-position: 0% 50%;
+    transform: scale(1);
+  }
+}
+
+/* Utility classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.8s ease-out;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.8s ease-out;
+}
+
+.animate-slide-left {
+  animation: slideLeft 0.8s ease-out;
+}
+
+.animate-slide-right {
+  animation: slideRight 0.8s ease-out;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-rotate-slow {
+  animation: rotate-slow 8s linear infinite;
+}
+
+.animate-kenyan-pride {
+  animation: kenyan-pride 4s ease-in-out infinite;
+}
+
+/* Status indicators with Kenyan colors */
+.status-online {
+  background: var(--kenyan-green);
+  color: var(--kenyan-white);
+}
+
+.status-warning {
+  background: #ffa500;
+  color: var(--kenyan-black);
+}
+
+.status-error {
+  background: var(--kenyan-red);
+  color: var(--kenyan-white);
+}
+
+.status-offline {
+  background: #666666;
+  color: var(--kenyan-white);
+}
+
+/* Responsive design helpers */
+@media (max-width: 640px) {
+  .theme-card {
+    padding: 1rem;
+  }
+  
+  .animate-slide-up,
+  .animate-slide-down,
+  .animate-slide-left,
+  .animate-slide-right {
+    animation-duration: 0.5s;
+  }
+  
+  .theme-option {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .kenyan-flag-stripe {
+    height: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .theme-selector {
+    gap: 4px;
+    padding: 2px;
+  }
+  
+  .theme-option {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Theme transition animations */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: var(--transition-normal);
+  transition-timing-function: ease-in-out;
+}
+
+/* Scrollbar theming */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 4px;
+  transition: background-color var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-accent);
+}
+
+[data-theme="kenyan"] ::-webkit-scrollbar-thumb {
+  background: var(--gradient-kenyan);
+}
+
+/* Selection colors */
+::selection {
+  background-color: rgba(207, 32, 39, 0.3);
+  color: var(--text-primary);
+}
+
+::-moz-selection {
+  background-color: rgba(207, 32, 39, 0.3);
+  color: var(--text-primary);
+}
+
+[data-theme="kenyan"] ::selection {
+  background-color: rgba(0, 102, 51, 0.4);
+  color: var(--kenyan-white);
+}
+
+/* Focus outlines */
+*:focus {
+  outline: 2px solid var(--border-accent);
+  outline-offset: 2px;
+}
+
+/* Remove focus outline for mouse users */
+.js-focus-visible *:focus:not(.focus-visible) {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border-primary: currentColor;
+    --border-secondary: currentColor;
+  }
+  
+  .theme-option {
+    border-width: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .kenyan-flag-stripe,
+  .theme-option.kenyan {
+    animation: none !important;
+  }
+}
+
+/* Dark mode preference detection */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+  }
+}
+
+/* Print styles */
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  .theme-card {
+    border: 1px solid black !important;
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "25JUNE",
+  "version": "1.0.0",
+  "description": "a super cool app just click and shut it down",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --disable-gpu --no-sandbox --disable-software-rasterizer",
+    "start-dev": "electron . --disable-gpu --no-sandbox --disable-software-rasterizer --enable-logging",
+    "start-safe": "electron . --disable-gpu --no-sandbox --disable-software-rasterizer --disable-extensions --disable-plugins",
+    "dev": "NODE_ENV=development electron . --disable-gpu",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "ws": "8.18.2"
+  },
+  "devDependencies": {
+    "electron": "^27.0.1",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.example.25june",
+    "productName": "25JUNE",
+    "icon": "icons/siahKE.ico",
+    "win": {
+      "target": "nsis"
+    }
+  }
+}

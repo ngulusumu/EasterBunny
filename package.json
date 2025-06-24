@@ -33,7 +33,7 @@
   "build": {
     "appId": "com.ngulusumu.mkenyatool",
     "productName": "MKenya Tool",
-    "icon": "icons/icon",
+    "icon": "icons/siahKE.ico",
     "directories": {
       "output": "dist"
     },
@@ -59,7 +59,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "icons/icon.ico",
+      "icon": "icons/siahKE.ico",
       "requestedExecutionLevel": "requireAdministrator"
     },
     "mac": {
@@ -69,7 +69,7 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "icon": "icons/icon.icns",
+      "icon": "icons/siahKE.ico",
       "category": "public.app-category.developer-tools"
     },
     "linux": {
@@ -83,7 +83,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "icons/icon.png",
+      "icon": "icons/siahKE.ico",
       "category": "Network"
     },
     "nsis": {

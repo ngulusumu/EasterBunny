@@ -8,6 +8,7 @@ const execAsync = util.promisify(exec);
 class LinuxSystemInfo {
     constructor() {
         this.systemData = {};
+        this.monitoringInterval = null;
     }
 
     // Get basic system information
@@ -452,8 +453,20 @@ class LinuxSystemInfo {
         }
     }
 
-    // Real-time monitoring method
+    // Real-time monitoring method - FIXED VERSION
     async startRealTimeMonitoring(callback, interval = 5000) {
+        // Clear any existing monitoring interval
+        if (this.monitoringInterval) {
+            clearInterval(this.monitoringInterval);
+            this.monitoringInterval = null;
+        }
+
+        // Validate callback parameter
+        if (typeof callback !== 'function') {
+            console.error('Invalid callback provided to startRealTimeMonitoring. Expected function, got:', typeof callback);
+            throw new Error('Callback must be a function');
+        }
+
         const monitor = async () => {
             try {
                 const quickInfo = {
@@ -463,21 +476,48 @@ class LinuxSystemInfo {
                     uptime: os.uptime(),
                     loadAverage: os.loadavg()
                 };
-                callback(quickInfo);
+                
+                // Safely call the callback
+                if (typeof callback === 'function') {
+                    callback(quickInfo);
+                } else {
+                    console.error('Callback is no longer a function during monitoring execution');
+                }
             } catch (error) {
                 console.error('Error in real-time monitoring:', error);
+                // Don't throw here to prevent stopping the monitoring loop
             }
         };
 
-        // Initial call
-        await monitor();
+        try {
+            // Initial call
+            await monitor();
 
-        // Set up interval
-        const intervalId = setInterval(monitor, interval);
-        
-        return {
-            stop: () => clearInterval(intervalId)
-        };
+            // Set up interval and store reference
+            this.monitoringInterval = setInterval(monitor, interval);
+            
+            return {
+                stop: () => {
+                    if (this.monitoringInterval) {
+                        clearInterval(this.monitoringInterval);
+                        this.monitoringInterval = null;
+                        console.log('Real-time monitoring stopped');
+                    }
+                }
+            };
+        } catch (error) {
+            console.error('Failed to start real-time monitoring:', error);
+            throw error;
+        }
+    }
+
+    // Stop all monitoring
+    stopMonitoring() {
+        if (this.monitoringInterval) {
+            clearInterval(this.monitoringInterval);
+            this.monitoringInterval = null;
+            console.log('Monitoring stopped');
+        }
     }
 }
 

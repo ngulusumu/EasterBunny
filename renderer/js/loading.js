@@ -1,19 +1,19 @@
-// Loading Page Logic and Animation Controller
 class LoadingController {
     constructor() {
         this.currentProgress = 0;
         this.targetProgress = 0;
         this.loadingStages = [
             { id: 1, name: 'System Information', duration: 800 },
-            { id: 2, name: 'Network Coordinator', duration: 1200 },
+            { id: 2, name: 'Private Network Coordinator', duration: 1200 },
             { id: 3, name: 'Security Engine', duration: 1000 },
-            { id: 4, name: 'Security Protocols', duration: 600 },
+            { id: 4, name: 'Coordination Protocols', duration: 600 },
             { id: 5, name: 'Final Checks', duration: 400 }
         ];
         this.currentStage = 0;
         this.isComplete = false;
         this.hasError = false;
         this.startTime = Date.now();
+        this.systemData = {};
         
         this.init();
     }
@@ -38,12 +38,10 @@ class LoadingController {
         
         imagePaths.forEach(path => {
             const img = new Image();
-            img.onload = () => console.log(`✅ Image loaded: ${path}`);
+            img.onload = () => console.log(`Image loaded: ${path}`);
             img.onerror = () => {
-                console.error(`❌ Failed to load image: ${path}`);
-                console.log('Trying alternative paths...');
+                console.error(`Failed to load image: ${path}`);
                 
-                // Try alternative paths
                 const altPaths = [
                     path.replace('./images/', '../images/'),
                     path.replace('./images/', './'),
@@ -52,8 +50,8 @@ class LoadingController {
                 
                 altPaths.forEach(altPath => {
                     const altImg = new Image();
-                    altImg.onload = () => console.log(`✅ Alternative path works: ${altPath}`);
-                    altImg.onerror = () => console.log(`❌ Alternative failed: ${altPath}`);
+                    altImg.onload = () => console.log(`Alternative path works: ${altPath}`);
+                    altImg.onerror = () => console.log(`Alternative failed: ${altPath}`);
                     altImg.src = altPath;
                 });
             };
@@ -72,7 +70,6 @@ class LoadingController {
             systemInfo: document.getElementById('system-info')
         };
 
-        // Get all stage elements
         this.stageElements = {};
         for (let i = 1; i <= 5; i++) {
             this.stageElements[i] = {
@@ -83,7 +80,6 @@ class LoadingController {
     }
 
     setupEventListeners() {
-        // Listen for keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             switch (e.key) {
                 case 'Escape':
@@ -113,20 +109,24 @@ class LoadingController {
             }
         });
 
-        // Listen for click anywhere to skip when complete
         document.addEventListener('click', (e) => {
             if (this.isComplete && !e.target.closest('.theme-selector')) {
                 this.navigateToMain();
             }
         });
 
-        // Listen for theme changes
         document.addEventListener('themechange', (e) => {
             this.onThemeChange(e.detail);
         });
+
+        // Listen for initialization stage updates
+        if (window.electronAPI) {
+            window.electronAPI.onInitializationStage((data) => {
+                this.onInitializationStage(data);
+            });
+        }
     }
 
-    // Fixed Image Switching Logic - Only left side switches
     initImageSwitching() {
         const leftImageF = document.getElementById('left-image-f');
         const leftImageM = document.getElementById('left-image-m');
@@ -137,12 +137,10 @@ class LoadingController {
             return;
         }
         
-        // Force set the right image immediately
         this.setBackgroundImage(rightImageSiah, './images/siahKE.jpg');
         
         let showingF = true;
         
-        // Add visual indicator for debugging
         const createIndicator = (text, color) => {
             const indicator = document.createElement('div');
             indicator.style.cssText = `
@@ -176,14 +174,12 @@ class LoadingController {
             console.log(`Switching to: ${showingF ? 'M' : 'F'}`);
             
             if (showingF) {
-                // Switch to M: Hide F, Show M
                 leftImageF.style.opacity = '0';
                 leftImageM.style.opacity = '0.8';
                 leftImageF.style.transform = 'scale(0.95)';
                 leftImageM.style.transform = 'scale(1)';
                 this.setBackgroundImage(leftImageM, './images/ngulusumuM.jpg');
             } else {
-                // Switch to F: Hide M, Show F
                 leftImageF.style.opacity = '0.8';
                 leftImageM.style.opacity = '0';
                 leftImageF.style.transform = 'scale(1)';
@@ -193,14 +189,10 @@ class LoadingController {
             showingF = !showingF;
         };
         
-        // Set initial images
         this.setBackgroundImage(leftImageF, './images/ngulusumuF.jpg');
         this.setBackgroundImage(leftImageM, './images/ngulusumuM.jpg');
         
-        // Initial switch after 2 seconds
         setTimeout(switchImages, 2000);
-        
-        // Then switch every 4 seconds
         setInterval(switchImages, 4000);
     }
 
@@ -221,10 +213,10 @@ class LoadingController {
             const img = new Image();
             img.onload = () => {
                 element.style.backgroundImage = `url('${possiblePaths[index]}')`;
-                console.log(`✅ Successfully set image: ${possiblePaths[index]}`);
+                console.log(`Successfully set image: ${possiblePaths[index]}`);
             };
             img.onerror = () => {
-                console.log(`❌ Failed path: ${possiblePaths[index]}`);
+                console.log(`Failed path: ${possiblePaths[index]}`);
                 tryPath(index + 1);
             };
             img.src = possiblePaths[index];
@@ -241,10 +233,8 @@ class LoadingController {
             return;
         }
         
-        // Clear existing particles
         particlesContainer.innerHTML = '';
         
-        // Create 9 particles with proper styling
         for (let i = 0; i < 9; i++) {
             const particle = document.createElement('div');
             particle.className = 'particle';
@@ -254,11 +244,10 @@ class LoadingController {
 
     async startLoading() {
         try {
-            // Simulate system initialization with realistic stages
             await this.loadStage(1, 'Initializing system information...');
-            await this.loadStage(2, 'Starting network coordinator...');
+            await this.loadStage(2, 'Starting private network coordinator...');
             await this.loadStage(3, 'Loading security engine...');
-            await this.loadStage(4, 'Configuring security protocols...');
+            await this.loadStage(4, 'Configuring coordination protocols...');
             await this.loadStage(5, 'Running final system checks...');
             
             await this.completeLoading();
@@ -271,39 +260,32 @@ class LoadingController {
         const stage = this.loadingStages[stageId - 1];
         this.currentStage = stageId;
         
-        // Update status text
         this.updateStatus(statusText);
-        
-        // Mark stage as loading
         this.updateStageIndicator(stageId, 'loading');
         
-        // Simulate actual loading with real system calls
         try {
             await this.performStageOperations(stageId);
         } catch (error) {
             throw new Error(`Failed at stage ${stageId}: ${error.message}`);
         }
         
-        // Calculate progress
         const progressIncrement = 100 / this.loadingStages.length;
         this.targetProgress = stageId * progressIncrement;
         
-        // Animate progress
         await this.animateProgress();
-        
-        // Mark stage as completed
         this.updateStageIndicator(stageId, 'completed');
-        
     }
 
     async performStageOperations(stageId) {
         switch (stageId) {
             case 1:
-                // System Information
                 if (window.electronAPI) {
                     try {
                         const systemInfo = await window.electronAPI.getBasicInfo();
-                        this.updateSystemInfo(systemInfo.data);
+                        if (systemInfo.success && systemInfo.data) {
+                            this.systemData.basic = systemInfo.data;
+                            this.updateSystemInfo(systemInfo.data);
+                        }
                     } catch (error) {
                         console.warn('Failed to get system info:', error);
                     }
@@ -312,19 +294,25 @@ class LoadingController {
                 break;
                 
             case 2:
-                // Network Coordinator
                 if (window.electronAPI) {
                     try {
-                        await window.electronAPI.testConnectivity();
+                        const coordStatus = await window.electronAPI.getCoordinationStatus();
+                        if (coordStatus.success && coordStatus.data) {
+                            this.systemData.coordination = coordStatus.data;
+                        }
+                        
+                        const myInfo = await window.electronAPI.getMyMachineInfo();
+                        if (myInfo.success && myInfo.data) {
+                            this.systemData.machine = myInfo.data;
+                        }
                     } catch (error) {
-                        console.warn('Network test failed:', error);
+                        console.warn('Coordination system not ready:', error);
                     }
                 }
                 await this.delay(1200);
                 break;
                 
             case 3:
-                // Security Engine
                 if (window.electronAPI) {
                     try {
                         const validation = await window.electronAPI.validateAttackConfig({
@@ -336,20 +324,39 @@ class LoadingController {
                         if (!validation.success) {
                             throw new Error('Security engine validation failed');
                         }
+                        this.systemData.security = { validated: true };
                     } catch (error) {
                         console.warn('Security engine check failed:', error);
+                        this.systemData.security = { validated: false };
                     }
                 }
                 await this.delay(1000);
                 break;
                 
             case 4:
-                // Security Protocols
+                if (window.electronAPI) {
+                    try {
+                        await window.electronAPI.refreshCoordinationNetwork();
+                        this.systemData.networkRefreshed = true;
+                    } catch (error) {
+                        console.warn('Network refresh failed:', error);
+                        this.systemData.networkRefreshed = false;
+                    }
+                }
                 await this.delay(600);
                 break;
                 
             case 5:
-                // Final Checks
+                if (window.electronAPI) {
+                    try {
+                        const performance = await window.electronAPI.getPerformanceMetrics();
+                        if (performance.success && performance.data) {
+                            this.systemData.performance = performance.data;
+                        }
+                    } catch (error) {
+                        console.warn('Performance check failed:', error);
+                    }
+                }
                 await this.delay(400);
                 break;
         }
@@ -368,7 +375,6 @@ class LoadingController {
 
         const { check, stage } = stageElement;
         
-        // Remove all status classes
         check.classList.remove('loading', 'completed', 'error');
         stage.classList.remove('text-gray-500', 'text-blue-400', 'text-green-400', 'text-red-400');
         
@@ -433,28 +439,88 @@ class LoadingController {
     }
 
     async completeLoading() {
+        this.updateStatus('Waiting for system initialization...');
+        
+        // Wait for initialization complete signal from main process
+        this.waitForInitialization();
+        
+        // Also set a maximum timeout to prevent infinite waiting
+        setTimeout(() => {
+            if (!this.isComplete && !this.hasError) {
+                console.warn('Initialization timeout - forcing navigation');
+                this.onInitializationComplete();
+            }
+        }, 15000); // 15 second timeout
+    }
+
+    waitForInitialization() {
+        // Listen for initialization events
+        if (window.electronAPI) {
+            window.electronAPI.onInitializationComplete(() => {
+                this.onInitializationComplete();
+            });
+
+            window.electronAPI.onInitializationError((error) => {
+                this.onInitializationError(error);
+            });
+            
+            // Also listen for stage updates
+            window.electronAPI.onInitializationStage((data) => {
+                this.onInitializationStage(data);
+            });
+        } else {
+            // Fallback for browser testing
+            setTimeout(() => {
+                this.onInitializationComplete();
+            }, 5000);
+        }
+    }
+
+    onInitializationComplete() {
         this.isComplete = true;
         this.updateStatus('System ready! Click anywhere to continue...');
         
-        // Add completion effects
         this.addCompletionEffects();
         
-        // Auto-navigate after 3 seconds
+        // Wait longer before auto-navigation to ensure user sees completion
         setTimeout(() => {
             if (this.isComplete) {
                 this.navigateToMain();
             }
-        }, 3000);
+        }, 5000); // Increased to 5 seconds
+    }
+
+    onInitializationError(error) {
+        this.showError(`Initialization failed: ${error.error || 'Unknown error'}`);
+    }
+
+    onInitializationStage(data) {
+        if (data.stage && data.stage <= 5) {
+            // Update the corresponding stage
+            this.updateStageIndicator(data.stage, 'loading');
+            
+            // Mark previous stages as completed
+            for (let i = 1; i < data.stage; i++) {
+                this.updateStageIndicator(i, 'completed');
+            }
+            
+            // Update progress
+            this.targetProgress = (data.stage / 5) * 100;
+            this.animateProgress();
+            
+            // Update status message
+            if (data.message) {
+                this.updateStatus(data.message);
+            }
+        }
     }
 
     addCompletionEffects() {
-        // Add success animation to progress bar
         if (this.elements.progressBar) {
             this.elements.progressBar.style.background = 'linear-gradient(90deg, #10b981, #34d399, #10b981)';
             this.elements.progressBar.style.backgroundSize = '200% 100%';
         }
         
-        // Show completion message
         this.showCompletionNotification();
     }
 
@@ -492,13 +558,11 @@ class LoadingController {
 
         document.body.appendChild(notification);
 
-        // Animate in
         requestAnimationFrame(() => {
             notification.style.opacity = '1';
             notification.style.transform = 'translateX(-50%) translateY(0)';
         });
 
-        // Auto-remove
         setTimeout(() => {
             notification.style.opacity = '0';
             notification.style.transform = 'translateX(-50%) translateY(20px)';
@@ -509,12 +573,10 @@ class LoadingController {
     showError(message) {
         this.hasError = true;
         
-        // Update current stage to error
         if (this.currentStage > 0) {
             this.updateStageIndicator(this.currentStage, 'error');
         }
         
-        // Show error container
         if (this.elements.errorContainer) {
             this.elements.errorContainer.classList.remove('hidden');
             this.elements.errorContainer.classList.add('error-shake');
@@ -533,22 +595,19 @@ class LoadingController {
         this.targetProgress = 0;
         this.currentStage = 0;
         this.isComplete = false;
+        this.systemData = {};
         
-        // Hide error container
         if (this.elements.errorContainer) {
             this.elements.errorContainer.classList.add('hidden');
             this.elements.errorContainer.classList.remove('error-shake');
         }
         
-        // Reset all stages
         for (let i = 1; i <= 5; i++) {
             this.updateStageIndicator(i, 'pending');
         }
         
-        // Reset progress
         this.updateProgressDisplay();
         
-        // Restart loading
         await this.delay(500);
         this.startLoading();
     }
@@ -564,10 +623,12 @@ class LoadingController {
     async updateSystemInfoPeriodically() {
         try {
             const info = await window.electronAPI.getPlatformInfo();
-            if (info.success) {
-                const platform = info.data.platform;
-                const arch = info.data.arch;
+            if (info.success && info.data) {
+                const platform = info.data.platform || 'Unknown';
+                const arch = info.data.arch || 'Unknown';
                 this.elements.systemInfo.textContent = `${platform} ${arch} • Nairobi, Kenya`;
+            } else {
+                this.elements.systemInfo.textContent = 'Nairobi, Kenya • System Ready';
             }
         } catch (error) {
             this.elements.systemInfo.textContent = 'Nairobi, Kenya • System Ready';
@@ -576,13 +637,14 @@ class LoadingController {
 
     updateSystemInfo(systemInfo) {
         if (systemInfo && this.elements.systemInfo) {
-            const { platform, arch, hostname } = systemInfo;
+            const platform = systemInfo.platform || 'Unknown';
+            const arch = systemInfo.arch || 'Unknown';
+            const hostname = systemInfo.hostname || 'Unknown';
             this.elements.systemInfo.textContent = `${platform} ${arch} • ${hostname}`;
         }
     }
 
     setupSkipTimer() {
-        // Show skip button after 5 seconds
         setTimeout(() => {
             if (this.elements.skipContainer && !this.isComplete) {
                 this.elements.skipContainer.classList.remove('hidden');
@@ -596,7 +658,6 @@ class LoadingController {
 
     async navigateToMain() {
         try {
-            // Add fade out effect
             document.body.style.transition = 'opacity 0.5s ease-in-out';
             document.body.style.opacity = '0';
             
@@ -605,18 +666,15 @@ class LoadingController {
             if (window.electronAPI) {
                 await window.electronAPI.navigateToMain();
             } else {
-                // Fallback for browser testing
                 window.location.href = 'index.html';
             }
         } catch (error) {
             console.error('Navigation failed:', error);
-            // Force navigation as fallback
             window.location.href = 'index.html';
         }
     }
 
     onThemeChange(themeDetail) {
-        // Adjust particles based on theme
         const particles = document.querySelectorAll('.particle');
         particles.forEach(particle => {
             switch (themeDetail.current) {
@@ -638,7 +696,6 @@ class LoadingController {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // Public methods for external access
     getLoadingProgress() {
         return {
             currentProgress: this.currentProgress,
@@ -646,7 +703,8 @@ class LoadingController {
             currentStage: this.currentStage,
             isComplete: this.isComplete,
             hasError: this.hasError,
-            elapsedTime: Date.now() - this.startTime
+            elapsedTime: Date.now() - this.startTime,
+            systemData: this.systemData
         };
     }
 
@@ -655,7 +713,6 @@ class LoadingController {
     }
 }
 
-// Theme Management Class
 class ThemeManager {
     constructor() {
         this.currentTheme = this.getStoredTheme() || 'dark';
@@ -683,7 +740,6 @@ class ThemeManager {
         this.updateThemeButtons();
         this.showThemeNotification(themeName);
         
-        // Dispatch theme change event
         document.dispatchEvent(new CustomEvent('themechange', {
             detail: { previous: previousTheme, current: themeName }
         }));
@@ -692,7 +748,6 @@ class ThemeManager {
     applyTheme(themeName) {
         document.documentElement.setAttribute('data-theme', themeName);
         
-        // Update particle colors based on theme
         const particles = document.querySelectorAll('.particle');
         particles.forEach(particle => {
             switch (themeName) {
@@ -787,7 +842,6 @@ class ThemeManager {
     }
 }
 
-// Global functions for HTML onclick handlers
 function retryLoading() {
     if (window.loadingController) {
         window.loadingController.retryLoading();
@@ -806,26 +860,21 @@ function setTheme(themeName) {
     }
 }
 
-// Initialize controllers when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     window.themeManager = new ThemeManager();
     window.loadingController = new LoadingController();
 });
 
-// Handle page visibility changes for performance
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-        // Pause animations when page is hidden
         const particles = document.querySelectorAll('.particle');
         particles.forEach(p => p.style.animationPlayState = 'paused');
     } else {
-        // Resume animations when page is visible
         const particles = document.querySelectorAll('.particle');
         particles.forEach(p => p.style.animationPlayState = 'running');
     }
 });
 
-// Export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { LoadingController, ThemeManager };
 }

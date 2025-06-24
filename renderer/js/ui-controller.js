@@ -21,6 +21,9 @@ class EnhancedUIController {
         this.updateIntervals = new Map();
         this.bandwidthHistory = [];
         this.maxBandwidth = 0;
+        this.setupRealTimeDataHandling();
+        this.lastDataUpdate = Date.now();
+        this.dataUpdateInterval = 1000; // Update every second
         
         this.init();
     }
@@ -122,6 +125,108 @@ class EnhancedUIController {
             });
         });
     }
+
+    setupRealTimeDataHandling() {
+        // Setup electronAPI event listeners if available
+        if (window.electronAPI) {
+            // Listen for attack progress updates
+            if (window.electronAPI.onAttackProgress) {
+                window.electronAPI.onAttackProgress((data) => {
+                    this.handleAttackProgressUpdate(data);
+                });
+            }
+            
+            // Listen for attack completed events
+            if (window.electronAPI.onAttackCompleted) {
+                window.electronAPI.onAttackCompleted((data) => {
+                    this.handleAttackCompleted(data);
+                });
+            }
+            
+            // Listen for attack started events
+            if (window.electronAPI.onAttackStarted) {
+                window.electronAPI.onAttackStarted((data) => {
+                    this.handleAttackStarted(data);
+                });
+            }
+            
+            // Listen for attack failed events
+            if (window.electronAPI.onAttackFailed) {
+                window.electronAPI.onAttackFailed((data) => {
+                    this.handleAttackFailed(data);
+                });
+            }
+            
+            console.log('Real-time data handlers setup completed');
+        } else {
+            console.log('ElectronAPI not available, using demo mode');
+        }
+    }
+
+    handleAttackStarted(data) {
+        console.log('Attack started:', data);
+        
+        // Add to active attacks if not already present
+        if (!this.activeAttacks.has(data.attackId || data.id)) {
+            this.addAttackToDisplay({
+                id: data.attackId || data.id,
+                target: data.target,
+                targets: data.targets,
+                method: data.method,
+                layer: data.layer,
+                duration: data.duration,
+                threads: data.threads,
+                status: 'running',
+                startTime: Date.now(),
+                progress: 0,
+                currentBandwidth: 0,
+                successRate: 100,
+                totalRequests: 0,
+                errors: 0
+            });
+        }
+        
+        this.addLog(`Attack started: ${data.target || data.attackId}`, 'success');
+    }
+
+    handleAttackCompleted(data) {
+        console.log('Attack completed:', data);
+        
+        const attackId = data.attackId || data.id;
+        if (this.activeAttacks.has(attackId)) {
+            const attack = this.activeAttacks.get(attackId);
+            attack.status = 'completed';
+            attack.progress = 100;
+            
+            this.updateAttackDisplay();
+            this.addLog(`Attack completed: ${attack.target || attackId}`, 'success');
+            this.showNotification(`Attack completed: ${attack.target || attackId}`, 'success');
+            
+            // Auto-remove completed attacks after 30 seconds
+            setTimeout(() => {
+                if (this.activeAttacks.has(attackId) && this.activeAttacks.get(attackId).status === 'completed') {
+                    this.removeAttack(attackId);
+                }
+            }, 30000);
+        }
+    }
+
+    // Handle attack failed events
+    handleAttackFailed(data) {
+        console.log('Attack failed:', data);
+        
+        const attackId = data.attackId || data.id;
+        if (this.activeAttacks.has(attackId)) {
+            const attack = this.activeAttacks.get(attackId);
+            attack.status = 'error';
+            
+            this.updateAttackDisplay();
+            this.addLog(`Attack failed: ${attack.target || attackId} - ${data.error || 'Unknown error'}`, 'error');
+            this.showNotification(`Attack failed: ${attack.target || attackId}`, 'error');
+        }
+    }
+
+
 
     setupQuickActionHandlers() {
         const stopAllBtn = document.getElementById('stop-all-btn');
@@ -301,6 +406,11 @@ class EnhancedUIController {
         }, 3000);
         this.updateIntervals.set('network', networkUpdateInterval);
 
+        const performanceUpdateInterval = setInterval(() => {
+                this.updatePerformanceDisplay();
+            }, 2000);
+            this.updateIntervals.set('performance', performanceUpdateInterval);
+
         // Start log updates
         const logUpdateInterval = setInterval(() => {
             this.updateLogDisplay();
@@ -344,6 +454,26 @@ class EnhancedUIController {
             }, 300));
         }
     }
+
+    isDataStale() {
+        return (Date.now() - this.lastDataUpdate) > (this.dataUpdateInterval * 3);
+    }
+
+    async refreshAllData() {
+        try {
+            await Promise.all([
+                this.updateSystemStats(),
+                this.updateAttackStats(),
+                this.updateNetworkStats()
+            ]);
+            
+            this.addLog('All data refreshed', 'info');
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+            this.addLog('Data refresh failed: ' + error.message, 'warning');
+        }
+    }
+
 
     async initializeSystemMonitoring() {
         try {
@@ -455,7 +585,6 @@ class EnhancedUIController {
         });
     }
 
-    // Attack Handlers
     async handleSingleAttack(event) {
         try {
             // Validate form inputs
@@ -465,14 +594,62 @@ class EnhancedUIController {
                 return;
             }
 
-            const target = document.getElementById('single-target').value.trim();
+            const targetInput = document.getElementById('single-target');
+            const targetValue = targetInput.value.trim();
+            
+            // Parse and format the target
+            const targetValidation = parseTarget(targetValue);
+            if (!targetValidation.valid) {
+                this.showNotification(`Invalid target: ${targetValidation.error}`, 'error');
+                return;
+            }
+
+            // Use the formatted target (with port)
+            const formattedTarget = targetValidation.formatted;
+            
             const layer = document.getElementById('single-layer').value;
             const method = document.getElementById('single-method').value;
             const duration = parseInt(document.getElementById('single-duration').value);
             const threads = parseInt(document.getElementById('single-threads').value);
 
+            // ✅ NEW: Validate resources before starting attack
+            if (window.electronAPI) {
+                try {
+                    const resourceValidation = await window.electronAPI.validateAttackResources(threads, 1);
+                    
+                    if (!resourceValidation.data.isValid) {
+                        const recommendation = resourceValidation.data.recommendations[0];
+                        this.showNotification(
+                            `Insufficient resources: ${recommendation?.message || 'Thread limit exceeded'}. ` +
+                            `Try ${resourceValidation.data.recommendedThreads} threads instead.`, 
+                            'error'
+                        );
+                        
+                        // Optionally auto-adjust the thread input
+                        const threadsInput = document.getElementById('single-threads');
+                        threadsInput.value = resourceValidation.data.recommendedThreads;
+                        this.setValidationState(threadsInput, 'warning');
+                        return;
+                    }
+                    
+                    // Show warning if not optimal but still safe
+                    if (!resourceValidation.data.isRecommended) {
+                        this.showNotification(
+                            `Using ${threads} threads exceeds recommended limit but is still safe. ` +
+                            `For optimal performance, try ${resourceValidation.data.recommendedThreads} threads.`, 
+                            'warning'
+                        );
+                    }
+                    
+                } catch (validationError) {
+                    console.warn('Resource validation failed:', validationError);
+                    // Continue with attack but show warning
+                    this.showNotification('Unable to validate resources, proceeding with caution', 'warning');
+                }
+            }
+
             const config = {
-                target,
+                target: formattedTarget, // Use formatted target
                 layer,
                 method,
                 duration,
@@ -480,10 +657,17 @@ class EnhancedUIController {
                 ...this.getAdvancedOptions()
             };
 
+            // Show warning if using default port
+            if (targetValidation.usingDefaultPort) {
+                this.showNotification(
+                    `Using default port 80 for ${targetValidation.host}`, 
+                    'info'
+                );
+            }
+
             this.showLoadingOverlay('Starting single target attack...');
             this.disableAttackButtons();
 
-            // Simulate attack start (replace with actual electronAPI call)
             if (window.electronAPI) {
                 const response = await window.electronAPI.startDDosAttack(config);
                 this.handleAttackResponse(response, 'single');
@@ -491,6 +675,10 @@ class EnhancedUIController {
                 // Demo mode
                 await this.simulateAttackStart(config, 'single');
             }
+
+            // Clear form on success
+            document.getElementById('single-attack-form').reset();
+            this.setValidationState(targetInput, 'neutral');
 
         } catch (error) {
             this.showNotification(`Error starting attack: ${error.message}`, 'error');
@@ -508,24 +696,70 @@ class EnhancedUIController {
                 return;
             }
 
-            const targets = document.getElementById('multi-targets').value
-                .split('\n')
-                .map(t => t.trim())
-                .filter(t => t.length > 0);
+            const targetsTextarea = document.getElementById('multi-targets');
             
-            if (targets.length === 0) {
-                this.showNotification('Please enter at least one target', 'error');
+            // Use the stored validation results from validateMultiTargets
+            if (!this.lastTargetValidation || this.lastTargetValidation.validCount === 0) {
+                this.showNotification('No valid targets found', 'error');
                 return;
             }
 
+            // Extract formatted targets (with ports)
+            const formattedTargets = this.lastTargetValidation.valid.map(t => t.formatted);
+            
             const layer = document.getElementById('multi-layer').value;
             const method = document.getElementById('multi-method').value;
             const duration = parseInt(document.getElementById('multi-duration').value);
             const threadsPerTarget = parseInt(document.getElementById('multi-threads').value);
             const rampUpTime = parseInt(document.getElementById('multi-rampup').value);
 
+            // ✅ NEW: Validate resources for multi-target attack
+            if (window.electronAPI) {
+                try {
+                    const resourceValidation = await window.electronAPI.validateAttackResources(
+                        threadsPerTarget, 
+                        formattedTargets.length
+                    );
+                    
+                    if (!resourceValidation.data.isValid) {
+                        const totalRequested = resourceValidation.data.totalThreadsRequested;
+                        const maxSafe = resourceValidation.data.maxSafeThreads;
+                        const recommendedPerTarget = Math.floor(resourceValidation.data.recommendedThreads / formattedTargets.length);
+                        
+                        this.showNotification(
+                            `Insufficient resources: ${totalRequested} total threads (${threadsPerTarget} × ${formattedTargets.length} targets) ` +
+                            `exceeds safe limit of ${maxSafe}. Try ${recommendedPerTarget} threads per target.`, 
+                            'error'
+                        );
+                        
+                        // Auto-adjust the threads per target input
+                        const threadsInput = document.getElementById('multi-threads');
+                        threadsInput.value = Math.max(1, recommendedPerTarget);
+                        this.setValidationState(threadsInput, 'warning');
+                        return;
+                    }
+                    
+                    // Show warning if not optimal but still safe
+                    if (!resourceValidation.data.isRecommended) {
+                        const totalThreads = resourceValidation.data.totalThreadsRequested;
+                        const recommendedPerTarget = Math.floor(resourceValidation.data.recommendedThreads / formattedTargets.length);
+                        
+                        this.showNotification(
+                            `${totalThreads} total threads exceeds recommended limit but is still safe. ` +
+                            `For optimal performance, try ${recommendedPerTarget} threads per target.`, 
+                            'warning'
+                        );
+                    }
+                    
+                } catch (validationError) {
+                    console.warn('Resource validation failed:', validationError);
+                    // Continue with attack but show warning
+                    this.showNotification('Unable to validate resources, proceeding with caution', 'warning');
+                }
+            }
+
             const config = {
-                targets,
+                targets: formattedTargets, // Use formatted targets
                 layer,
                 method,
                 duration,
@@ -534,7 +768,22 @@ class EnhancedUIController {
                 ...this.getAdvancedOptions()
             };
 
-            this.showLoadingOverlay('Starting multi-target attack...');
+            // Show warnings
+            if (this.lastTargetValidation.summary.invalidCount > 0) {
+                this.showNotification(
+                    `${this.lastTargetValidation.summary.invalidCount} invalid targets will be skipped`, 
+                    'warning'
+                );
+            }
+
+            if (this.lastTargetValidation.summary.warningCount > 0) {
+                this.showNotification(
+                    `${this.lastTargetValidation.summary.warningCount} targets using default port 80`, 
+                    'info'
+                );
+            }
+
+            this.showLoadingOverlay(`Starting multi-target attack on ${formattedTargets.length} targets...`);
             this.disableAttackButtons();
 
             if (window.electronAPI) {
@@ -544,6 +793,11 @@ class EnhancedUIController {
                 // Demo mode
                 await this.simulateAttackStart(config, 'multi');
             }
+
+            // Clear form on success
+            document.getElementById('multi-attack-form').reset();
+            this.setValidationState(targetsTextarea, 'neutral');
+            this.updateTargetCount();
 
         } catch (error) {
             this.showNotification(`Error starting multi-target attack: ${error.message}`, 'error');
@@ -681,19 +935,81 @@ class EnhancedUIController {
 
     async updateAttackStats() {
         try {
-            if (window.electronAPI) {
+            if (window.electronAPI && window.electronAPI.getActiveAttacks) {
                 const response = await window.electronAPI.getActiveAttacks();
-                if (response.success) {
-                    this.processActiveAttacks(response.data);
+                if (response.success && Array.isArray(response.data)) {
+                    this.processActiveAttacksData(response.data);
                 }
             } else {
                 // Demo mode - simulate attack progress
                 this.simulateAttackProgress();
             }
+            
+            // Update last data timestamp
+            this.lastDataUpdate = Date.now();
+            
         } catch (error) {
             console.warn('Failed to update attack stats:', error);
+            // Fallback to demo mode
             this.simulateAttackProgress();
         }
+    }
+
+    processActiveAttacksData(attacksData) {
+        // Update existing attacks and add new ones
+        const currentAttackIds = new Set();
+        
+        attacksData.forEach(attackData => {
+            const attackId = attackData.id || attackData.attackId;
+            currentAttackIds.add(attackId);
+            
+            if (this.activeAttacks.has(attackId)) {
+                // Update existing attack
+                const existingAttack = this.activeAttacks.get(attackId);
+                Object.assign(existingAttack, {
+                    progress: attackData.progress || existingAttack.progress,
+                    currentBandwidth: attackData.bandwidth || attackData.currentBandwidth || existingAttack.currentBandwidth,
+                    successRate: attackData.successRate || existingAttack.successRate,
+                    totalRequests: attackData.totalRequests || existingAttack.totalRequests,
+                    errors: attackData.errors || existingAttack.errors,
+                    status: attackData.status || existingAttack.status,
+                    lastUpdate: Date.now()
+                });
+            } else {
+                // Add new attack
+                this.addAttackToDisplay({
+                    id: attackId,
+                    target: attackData.target,
+                    targets: attackData.targets,
+                    method: attackData.method || 'GET',
+                    layer: attackData.layer || 'Layer7',
+                    duration: attackData.duration || 60,
+                    threads: attackData.threads || 1,
+                    status: attackData.status || 'running',
+                    startTime: attackData.startTime || Date.now(),
+                    progress: attackData.progress || 0,
+                    currentBandwidth: attackData.bandwidth || attackData.currentBandwidth || 0,
+                    successRate: attackData.successRate || 100,
+                    totalRequests: attackData.totalRequests || 0,
+                    errors: attackData.errors || 0
+                });
+            }
+        });
+        
+        // Remove attacks that are no longer active (if they're not completed/error status)
+        const attacksToRemove = [];
+        this.activeAttacks.forEach((attack, id) => {
+            if (!currentAttackIds.has(id) && !['completed', 'error', 'stopped'].includes(attack.status)) {
+                attacksToRemove.push(id);
+            }
+        });
+        
+        attacksToRemove.forEach(id => {
+            console.log(`Removing stale attack: ${id}`);
+            this.activeAttacks.delete(id);
+        });
+        
+        this.updateAttackDisplay();
     }
 
     simulateAttackProgress() {
@@ -702,20 +1018,69 @@ class EnhancedUIController {
                 const elapsed = (Date.now() - attack.startTime) / 1000;
                 const progress = Math.min(100, (elapsed / attack.duration) * 100);
                 
+                // Simulate realistic bandwidth progression
+                const baseSpeed = 500000; // 500KB/s base
+                const variance = Math.sin(Date.now() / 1000) * 200000; // ±200KB/s variation
+                attack.currentBandwidth = Math.max(0, baseSpeed + variance + (Math.random() * 100000));
+                
+                // Simulate success rate (starts high, may degrade over time)
+                const initialRate = 98;
+                const degradation = Math.random() * 2; // Up to 2% degradation
+                attack.successRate = Math.max(85, initialRate - degradation);
+                
+                // Simulate request count
+                const requestsPerSecond = Math.floor(attack.currentBandwidth / 1000); // Rough estimate
+                attack.totalRequests = (attack.totalRequests || 0) + requestsPerSecond;
+                
+                // Simulate errors (small percentage)
+                const errorRate = (100 - attack.successRate) / 100;
+                attack.errors = Math.floor(attack.totalRequests * errorRate);
+                
+                // Update progress
                 attack.progress = progress;
-                attack.currentBandwidth = Math.random() * 1000000 + 500000; // 0.5-1.5 MB/s
-                attack.successRate = Math.max(85, 100 - Math.random() * 15);
-
+                
+                // Handle completion
                 if (progress >= 100) {
                     attack.status = 'completed';
                     attack.progress = 100;
                     this.addLog(`Attack completed: ${id}`, 'success');
-                    this.showNotification(`Attack ${id} completed`, 'info');
+                    this.showNotification(`Attack ${attack.target || id} completed`, 'success');
                 }
             }
         });
 
         this.updateAttackDisplay();
+    }
+
+    handleAttackProgressUpdate(data) {
+        const { attackId, progress, bandwidth, successRate, totalRequests, errors, status } = data;
+        
+        if (this.activeAttacks.has(attackId)) {
+            const attack = this.activeAttacks.get(attackId);
+            
+            // Update attack data
+            Object.assign(attack, {
+                progress: progress || attack.progress,
+                currentBandwidth: bandwidth || attack.currentBandwidth,
+                successRate: successRate || attack.successRate,
+                totalRequests: totalRequests || attack.totalRequests,
+                errors: errors || attack.errors,
+                status: status || attack.status,
+                lastUpdate: Date.now()
+            });
+            
+            // Update display
+            this.updateAttackDisplay();
+            
+            // Handle status changes
+            if (status === 'completed') {
+                this.addLog(`Attack completed: ${attackId}`, 'success');
+                this.showNotification(`Attack completed: ${attack.target || attackId}`, 'success');
+            } else if (status === 'error') {
+                this.addLog(`Attack failed: ${attackId}`, 'error');
+                this.showNotification(`Attack failed: ${attack.target || attackId}`, 'error');
+            }
+        }
     }
 
     processActiveAttacks(attacks) {
@@ -735,45 +1100,164 @@ class EnhancedUIController {
         // Update attack counts
         this.updateElementText('active-attacks-count', activeCount);
         this.updateElementText('attacks-tab-count', this.activeAttacks.size);
+        this.updateElementText('header-attacks', activeCount);
         
         // Calculate total stats
         let totalBandwidth = 0;
         let totalRequests = 0;
         let successfulRequests = 0;
+        let totalErrors = 0;
 
         this.activeAttacks.forEach(attack => {
             totalBandwidth += attack.currentBandwidth || 0;
             const requests = attack.totalRequests || 0;
             totalRequests += requests;
             successfulRequests += Math.round(requests * (attack.successRate || 100) / 100);
+            totalErrors += attack.errors || 0;
         });
 
-        // Update bandwidth tracking
+        // Update bandwidth tracking and peak detection
         this.bandwidthHistory.push(totalBandwidth);
         if (this.bandwidthHistory.length > 60) { // Keep last 60 readings (1 minute)
             this.bandwidthHistory.shift();
         }
         this.maxBandwidth = Math.max(this.maxBandwidth, totalBandwidth);
 
-        // Update display
+        // Update display elements
         this.updateElementText('total-bandwidth', this.formatBytes(totalBandwidth) + '/s');
         this.updateElementText('bandwidth-peak', 'Peak: ' + this.formatBytes(this.maxBandwidth) + '/s');
         
         const successRate = totalRequests > 0 ? (successfulRequests / totalRequests) * 100 : 100;
         this.updateElementText('success-rate', Math.round(successRate) + '%');
-        this.updateElementText('total-requests', totalRequests + ' requests');
+        this.updateElementText('total-requests', totalRequests.toLocaleString() + ' requests');
 
-        // Update attack status
+        // Update network peers (simulate for demo)
+        const peerCount = Math.min(5, Math.max(1, this.activeAttacks.size + 1));
+        this.updateElementText('network-peers', peerCount);
+        this.updateElementText('peer-status', peerCount === 1 ? 'Local machine' : `${peerCount - 1} external`);
+
+        // Update attack status text
         if (activeCount > 0) {
-            this.updateElementText('attacks-status', `${activeCount} running`);
-            document.getElementById('stop-all-btn').disabled = false;
+            this.updateElementText('attacks-status', `${activeCount} active`);
+            const stopAllBtn = document.getElementById('stop-all-btn');
+            if (stopAllBtn) stopAllBtn.disabled = false;
         } else {
             this.updateElementText('attacks-status', 'Ready to start');
-            document.getElementById('stop-all-btn').disabled = true;
+            const stopAllBtn = document.getElementById('stop-all-btn');
+            if (stopAllBtn) stopAllBtn.disabled = true;
         }
 
-        // Update attack list
+        // Update the actual attack list display
         this.updateActiveAttacksList();
+        
+        // Update network activity tab
+        this.updateNetworkActivityDisplay();
+    }
+
+    updateNetworkActivityDisplay() {
+        const container = document.getElementById('network-activity');
+        if (!container) return;
+        
+        const networkTabCount = document.getElementById('network-tab-count');
+        if (networkTabCount) {
+            networkTabCount.textContent = this.activeAttacks.size.toString();
+        }
+        
+        if (this.activeAttacks.size === 0) {
+            container.innerHTML = `
+                <div class="text-center text-gray-400 py-8">
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
+                    </svg>
+                    <p>No network activity</p>
+                    <p class="text-sm">Network monitoring will appear here</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Create network activity cards
+        const activityCards = Array.from(this.activeAttacks.values()).map(attack => {
+            const targets = Array.isArray(attack.targets) ? attack.targets : [attack.target];
+            const bandwidth = this.formatBytes(attack.currentBandwidth || 0);
+            const requestRate = Math.floor((attack.currentBandwidth || 0) / 100); // Rough estimate
+            
+            return `
+                <div class="bg-gray-800/50 rounded-lg p-3 border border-gray-700/30">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1 min-w-0">
+                            <h5 class="font-medium text-white text-sm truncate">
+                                ${targets.length === 1 ? targets[0] : `${targets.length} targets`}
+                            </h5>
+                            <p class="text-xs text-gray-400">${attack.method} • ${attack.layer}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-green-400 text-sm font-medium">${bandwidth}/s</div>
+                            <div class="text-xs text-gray-400">${requestRate} req/s</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2 text-xs">
+                        <div class="flex-1 bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-green-400 h-1.5 rounded-full transition-all duration-500" 
+                                style="width: ${attack.progress || 0}%"></div>
+                        </div>
+                        <span class="text-gray-400 w-8">${Math.round(attack.progress || 0)}%</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
+                        <span>Success: ${Math.round(attack.successRate || 0)}%</span>
+                        <span>Errors: ${attack.errors || 0}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = activityCards;
+    }
+
+    updatePerformanceDisplay() {
+        const container = document.getElementById('performance-chart');
+        if (!container) return;
+        
+        // Create a simple ASCII-style bandwidth chart
+        const chartData = this.bandwidthHistory.slice(-20); // Last 20 data points
+        const maxValue = Math.max(...chartData, 1);
+        
+        const chartHTML = `
+            <div class="space-y-2">
+                <div class="text-xs text-gray-400 mb-2">Bandwidth History (Last 20s)</div>
+                <div class="flex items-end justify-between h-20 space-x-1">
+                    ${chartData.map((value, index) => {
+                        const height = Math.max(4, (value / maxValue) * 76); // 4px minimum, 76px max
+                        const color = value > maxValue * 0.8 ? 'bg-red-400' : 
+                                    value > maxValue * 0.6 ? 'bg-yellow-400' : 'bg-green-400';
+                        return `<div class="flex-1 ${color} rounded-t" style="height: ${height}px" title="${this.formatBytes(value)}/s"></div>`;
+                    }).join('')}
+                </div>
+                <div class="flex justify-between text-xs text-gray-500">
+                    <span>0</span>
+                    <span>10s</span>
+                    <span>20s</span>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = chartHTML;
+        
+        // Update performance statistics
+        const totalRequests = Array.from(this.activeAttacks.values())
+            .reduce((sum, attack) => sum + (attack.totalRequests || 0), 0);
+        const totalErrors = Array.from(this.activeAttacks.values())
+            .reduce((sum, attack) => sum + (attack.errors || 0), 0);
+        const avgBandwidth = this.bandwidthHistory.length > 0 ? 
+            this.bandwidthHistory.reduce((a, b) => a + b, 0) / this.bandwidthHistory.length : 0;
+        const totalDataSent = totalRequests * 1024; // Rough estimate
+        
+        this.updateElementText('total-requests-stat', totalRequests.toLocaleString());
+        this.updateElementText('failed-requests-stat', totalErrors.toLocaleString());
+        this.updateElementText('avg-response-stat', '150ms'); // Simulated
+        this.updateElementText('data-sent-stat', this.formatBytes(totalDataSent));
     }
 
     updateActiveAttacksList() {
@@ -797,63 +1281,182 @@ class EnhancedUIController {
         container.innerHTML = attacksArray.map(attack => this.createAttackCard(attack)).join('');
     }
 
+    // Fixed attack card creation with better formatting
     createAttackCard(attack) {
         const status = attack.status || 'running';
         const targets = Array.isArray(attack.targets) ? attack.targets : [attack.target || 'Unknown'];
-        const targetDisplay = targets.length === 1 ? targets[0] : `${targets.length} targets`;
+        const targetDisplay = targets.length === 1 ? 
+            (targets[0].length > 30 ? targets[0].substring(0, 30) + '...' : targets[0]) : 
+            `${targets.length} targets`;
+        
         const method = attack.method || 'Unknown';
-        const progress = attack.progress || 0;
+        const layer = attack.layer || 'Layer7';
+        const progress = Math.min(100, Math.max(0, attack.progress || 0));
         const bandwidth = this.formatBytes(attack.currentBandwidth || 0) + '/s';
         const successRate = Math.round(attack.successRate || 0) + '%';
-        const elapsed = attack.startTime ? Math.floor((Date.now() - attack.startTime) / 1000) : 0;
-        const remaining = Math.max(0, (attack.duration || 0) - elapsed);
+        const totalRequests = (attack.totalRequests || 0).toLocaleString();
+        const errors = attack.errors || 0;
+        
+        // Calculate time information
+        const startTime = attack.startTime || Date.now();
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const duration = attack.duration || 60;
+        const remaining = Math.max(0, duration - elapsed);
+        
+        // Status styling
+        const statusColors = {
+            'running': 'bg-green-500 text-white',
+            'completed': 'bg-blue-500 text-white',
+            'stopped': 'bg-red-500 text-white',
+            'error': 'bg-red-600 text-white',
+            'paused': 'bg-yellow-500 text-black'
+        };
+        
+        const progressColors = {
+            'running': 'bg-gradient-to-r from-green-400 to-green-500',
+            'completed': 'bg-gradient-to-r from-blue-400 to-blue-500',
+            'stopped': 'bg-gradient-to-r from-red-400 to-red-500',
+            'error': 'bg-gradient-to-r from-red-500 to-red-600',
+            'paused': 'bg-gradient-to-r from-yellow-400 to-yellow-500'
+        };
 
         return `
-            <div class="attack-card" data-attack-id="${attack.id}">
+            <div class="attack-card bg-gray-800/60 rounded-lg p-4 border border-gray-700/50 hover:bg-gray-800/80 transition-all duration-200" 
+                data-attack-id="${attack.id}">
+                
+                <!-- Header -->
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1 min-w-0">
-                        <h4 class="font-semibold text-white truncate">${targetDisplay}</h4>
-                        <p class="text-sm text-gray-400">${method} • ${this.formatTime(remaining)} remaining</p>
+                        <h4 class="font-semibold text-white truncate text-lg">${targetDisplay}</h4>
+                        <div class="flex items-center space-x-2 text-sm text-gray-400 mt-1">
+                            <span class="px-2 py-1 bg-gray-700/50 rounded text-xs">${method}</span>
+                            <span class="px-2 py-1 bg-gray-700/50 rounded text-xs">${layer}</span>
+                            <span class="text-gray-500">•</span>
+                            <span>${this.formatTime(elapsed)} elapsed</span>
+                            <span class="text-gray-500">•</span>
+                            <span>${this.formatTime(remaining)} remaining</span>
+                        </div>
                     </div>
-                    <span class="status-badge ${status} ml-2">${status}</span>
+                    <span class="status-badge px-2 py-1 rounded-full text-xs font-medium ${statusColors[status] || statusColors.running}">
+                        ${status.toUpperCase()}
+                    </span>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
-                    <div>
-                        <span class="text-gray-400">Bandwidth:</span>
-                        <span class="text-white ml-2">${bandwidth}</span>
+                <!-- Statistics Grid -->
+                <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
+                    <div class="bg-gray-900/50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400">Bandwidth</span>
+                            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                        </div>
+                        <div class="text-white font-bold text-lg">${bandwidth}</div>
                     </div>
-                    <div>
-                        <span class="text-gray-400">Success:</span>
-                        <span class="text-white ml-2">${successRate}</span>
+                    
+                    <div class="bg-gray-900/50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400">Success Rate</span>
+                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="text-white font-bold text-lg">${successRate}</div>
+                    </div>
+                    
+                    <div class="bg-gray-900/50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400">Requests</span>
+                            <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                            </svg>
+                        </div>
+                        <div class="text-white font-bold text-lg">${totalRequests}</div>
+                    </div>
+                    
+                    <div class="bg-gray-900/50 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400">Errors</span>
+                            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                            </svg>
+                        </div>
+                        <div class="text-white font-bold text-lg">${errors}</div>
                     </div>
                 </div>
                 
-                <div class="mb-3">
-                    <div class="flex justify-between text-sm mb-1">
+                <!-- Progress Bar -->
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm mb-2">
                         <span class="text-gray-400">Progress</span>
-                        <span class="text-white">${Math.round(progress)}%</span>
+                        <span class="text-white font-medium">${Math.round(progress)}%</span>
                     </div>
-                    <div class="w-full bg-gray-700 rounded-full h-2">
-                        <div class="progress-bar h-2 rounded-full transition-all duration-300" style="width: ${progress}%"></div>
+                    <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                        <div class="h-3 rounded-full transition-all duration-500 ${progressColors[status] || progressColors.running}" 
+                            style="width: ${progress}%">
+                            <div class="h-full bg-white/20 animate-pulse"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Started: ${new Date(startTime).toLocaleTimeString()}</span>
+                        <span>Duration: ${this.formatTime(duration)}</span>
                     </div>
                 </div>
                 
-                ${status === 'running' ? `
-                    <button onclick="uiController.stopAttack('${attack.id}')" 
-                            class="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm py-1.5 rounded transition-all duration-200">
-                        Stop Attack
-                    </button>
-                ` : `
-                    <button onclick="uiController.removeAttack('${attack.id}')" 
-                            class="w-full bg-gray-600 hover:bg-gray-700 text-white text-sm py-1.5 rounded transition-all duration-200">
-                        Remove
-                    </button>
-                `}
+                <!-- Action Buttons -->
+                <div class="flex space-x-2">
+                    ${status === 'running' ? `
+                        <button onclick="uiController.pauseAttack('${attack.id}')" 
+                                class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black text-sm py-2 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>
+                            </svg>
+                            <span>Pause</span>
+                        </button>
+                        <button onclick="uiController.stopAttack('${attack.id}')" 
+                                class="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h6v4H9z"/>
+                            </svg>
+                            <span>Stop</span>
+                        </button>
+                    ` : status === 'paused' ? `
+                        <button onclick="uiController.resumeAttack('${attack.id}')" 
+                                class="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm py-2 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 0v6m6-6v6"/>
+                            </svg>
+                            <span>Resume</span>
+                        </button>
+                        <button onclick="uiController.stopAttack('${attack.id}')" 
+                                class="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h6v4H9z"/>
+                            </svg>
+                            <span>Stop</span>
+                        </button>
+                    ` : `
+                        <button onclick="uiController.viewAttackDetails('${attack.id}')" 
+                                class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-2 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>Details</span>
+                        </button>
+                        <button onclick="uiController.removeAttack('${attack.id}')" 
+                                class="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm py-2 px-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-8a1 1 0 00-1 1v3m12 0a1 1 0 100-2h-2.5m-6 2h6"/>
+                            </svg>
+                            <span>Remove</span>
+                        </button>
+                    `}
+                </div>
             </div>
         `;
     }
-
     async updateNetworkStats() {
         try {
             if (window.electronAPI) {
@@ -989,6 +1592,30 @@ class EnhancedUIController {
         return isValid;
     }
 
+    monitorConnectionStatus() {
+        setInterval(() => {
+            const isStale = this.isDataStale();
+            const statusIndicator = document.getElementById('system-status-indicator');
+            const statusText = document.getElementById('system-status-text');
+            
+            if (statusIndicator && statusText) {
+                if (isStale) {
+                    statusIndicator.className = 'w-2 h-2 bg-yellow-500 rounded-full';
+                    statusText.textContent = 'Connection Issues';
+                    statusText.className = 'text-yellow-400';
+                } else if (this.activeAttacks.size > 0) {
+                    statusIndicator.className = 'w-2 h-2 bg-green-500 rounded-full animate-pulse';
+                    statusText.textContent = 'Active Operations';
+                    statusText.className = 'text-green-400';
+                } else {
+                    statusIndicator.className = 'w-2 h-2 bg-blue-500 rounded-full';
+                    statusText.textContent = 'System Ready';
+                    statusText.className = 'text-blue-400';
+                }
+            }
+        }, 5000);
+    }
+
     validateTargetInput(input) {
         const target = input.value.trim();
         if (!target) {
@@ -996,18 +1623,18 @@ class EnhancedUIController {
             return;
         }
 
-        // Basic validation for domain:port or IP:port format
-        const pattern = /^([a-zA-Z0-9.-]+|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$/;
+        const validation = parseTarget(target);
         
-        if (pattern.test(target)) {
-            const port = parseInt(target.split(':')[1]);
-            if (port >= 1 && port <= 65535) {
-                this.setValidationState(input, 'success', 'Valid target format');
+        if (validation.valid) {
+            let message = `Valid ${validation.type}`;
+            if (validation.usingDefaultPort) {
+                message += ` (using default port ${validation.port})`;
+                this.setValidationState(input, 'warning', message);
             } else {
-                this.setValidationState(input, 'error', 'Port must be between 1 and 65535');
+                this.setValidationState(input, 'success', message);
             }
         } else {
-            this.setValidationState(input, 'error', 'Use format: domain:port or IP:port');
+            this.setValidationState(input, 'error', validation.error);
         }
     }
 
@@ -1023,28 +1650,59 @@ class EnhancedUIController {
 
         let validCount = 0;
         let invalidCount = 0;
-        const pattern = /^([a-zA-Z0-9.-]+|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$/;
+        let warningCount = 0;
+        const validTargets = [];
+        const invalidTargets = [];
 
         targets.forEach(target => {
-            if (pattern.test(target)) {
-                const port = parseInt(target.split(':')[1]);
-                if (port >= 1 && port <= 65535) {
-                    validCount++;
-                } else {
-                    invalidCount++;
+            const validation = parseTarget(target);
+            
+            if (validation.valid) {
+                validCount++;
+                validTargets.push({
+                    original: target,
+                    formatted: validation.formatted,
+                    usingDefaultPort: validation.usingDefaultPort
+                });
+                
+                if (validation.usingDefaultPort) {
+                    warningCount++;
                 }
             } else {
                 invalidCount++;
+                invalidTargets.push({
+                    original: target,
+                    error: validation.error
+                });
             }
         });
 
+        // Set validation state based on results
         if (invalidCount === 0) {
-            this.setValidationState(textarea, 'success', `${validCount} valid targets`);
+            if (warningCount > 0) {
+                this.setValidationState(textarea, 'warning', 
+                    `${validCount} valid targets (${warningCount} using default port 80)`);
+            } else {
+                this.setValidationState(textarea, 'success', `${validCount} valid targets`);
+            }
         } else if (validCount === 0) {
             this.setValidationState(textarea, 'error', `All ${invalidCount} targets are invalid`);
         } else {
-            this.setValidationState(textarea, 'warning', `${validCount} valid, ${invalidCount} invalid targets`);
+            this.setValidationState(textarea, 'warning', 
+                `${validCount} valid, ${invalidCount} invalid targets`);
         }
+
+        // Store validation results for use in attack handlers
+        this.lastTargetValidation = {
+            valid: validTargets,
+            invalid: invalidTargets,
+            summary: {
+                total: targets.length,
+                validCount,
+                invalidCount,
+                warningCount
+            }
+        };
     }
 
     validateThreadCount(input) {
@@ -1510,11 +2168,30 @@ class EnhancedUIController {
        }
    }
 
-   addAttackToDisplay(attackData) {
-       this.activeAttacks.set(attackData.id, attackData);
-       this.updateAttackDisplay();
-       this.addLog(`Attack added: ${attackData.id}`, 'info');
-   }
+    addAttackToDisplay(attackData) {
+        // Ensure we have all required fields with defaults
+        const attack = {
+            id: attackData.id || `attack_${Date.now()}`,
+            target: attackData.target || (Array.isArray(attackData.targets) ? attackData.targets.join(', ') : 'Unknown'),
+            targets: attackData.targets || [attackData.target || 'Unknown'],
+            method: attackData.method || 'GET',
+            layer: attackData.layer || 'Layer7',
+            status: attackData.status || 'running',
+            startTime: attackData.startTime || Date.now(),
+            duration: attackData.duration || 60,
+            threads: attackData.threads || attackData.threadsPerTarget || 1,
+            progress: attackData.progress || 0,
+            currentBandwidth: attackData.currentBandwidth || 0,
+            successRate: attackData.successRate || 100,
+            totalRequests: attackData.totalRequests || 0,
+            errors: attackData.errors || 0,
+            ...attackData // Spread any additional data
+        };
+        
+        this.activeAttacks.set(attack.id, attack);
+        this.updateAttackDisplay();
+        this.addLog(`Attack added to display: ${attack.id}`, 'info');
+    }
 
    // UI Control Methods
    switchActivityTab(tabName) {

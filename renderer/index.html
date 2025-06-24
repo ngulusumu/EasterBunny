@@ -59,6 +59,12 @@
                         <span id="system-status-text" class="text-gray-300">System Ready</span>
                     </div>
                     
+                    <!-- Network Status -->
+                    <div class="flex items-center space-x-2 text-sm">
+                        <div id="network-indicator" class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        <span id="network-text" class="text-gray-300">Network</span>
+                    </div>
+                    
                     <!-- Advanced Settings Button -->
                     <button id="advanced-settings-btn" 
                             class="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-200"
@@ -181,8 +187,11 @@
                         <label class="block text-sm font-medium text-gray-300 mb-2">Target URL/IP</label>
                         <input type="text" id="single-target" 
                                class="theme-input w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-primary-500"
-                               placeholder="example.com:80 or 192.168.1.1:8080">
+                               placeholder="example.com, example.com:80, or 192.168.1.1:8080">
                         <div id="single-target-validation" class="validation-message hidden"></div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            Supports: domain.com, domain.com:port, or IP:port formats
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -272,7 +281,7 @@
                         <div class="relative">
                             <textarea id="multi-targets" 
                                       class="theme-input w-full px-4 py-3 rounded-lg h-32 resize-none"
-                                      placeholder="example1.com:80&#10;example2.com:443&#10;192.168.1.1:8080&#10;&#10;Or drag and drop a file here..."></textarea>
+                                      placeholder="example1.com&#10;example2.com:443&#10;192.168.1.1:8080&#10;subdomain.domain.org&#10;&#10;Or drag and drop a file here..."></textarea>
                             <div id="drop-zone-overlay" class="absolute inset-0 border-2 border-dashed border-primary-500 bg-primary-500/10 rounded-lg hidden flex items-center justify-center">
                                 <div class="text-center">
                                     <svg class="w-8 h-8 mx-auto mb-2 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,6 +292,9 @@
                             </div>
                         </div>
                         <div id="multi-targets-validation" class="validation-message hidden"></div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            Supports domains (with/without ports) and IP addresses with ports
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -782,6 +794,1666 @@
     <script src="js/attack-manager.js"></script>
     <script src="js/network-manager.js"></script>
 
+    <!-- Enhanced JavaScript for Target Validation and Network Integration -->
+    <script>
+        // Global configuration object
+        window.appConfig = {
+            maxFileSize: 10 * 1024 * 1024, // 10MB
+            supportedFileTypes: {
+                targets: ['.txt', '.list'],
+                proxies: ['.txt', '.list'],
+                config: ['.json']
+            },
+            updateIntervals: {
+                system: 2000,
+                attacks: 1000,
+                network: 3000
+            },
+            maxLogs: 1000,
+            autoSave: true,
+            // Default ports for protocols
+            defaultPorts: {
+                http: 80,
+                https: 443,
+                ftp: 21,
+                ssh: 22,
+                telnet: 23,
+                smtp: 25,
+                dns: 53
+            }
+        };
+
+        // Enhanced target validation functions
+        class TargetValidator {
+            static isValidDomain(domain) {
+                // Remove protocol if present
+                domain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
+                
+                // Allow simple domains like fb.com, google.com, etc.
+                const simpleDomainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.[a-zA-Z]{2,}$/;
+                const complexDomainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+                
+                // Check length constraints
+                if (domain.length > 253 || domain.length < 4) return false;
+                
+                // Split by dots and check each part
+                const parts = domain.split('.');
+                if (parts.length < 2) return false;
+                
+                // Check if TLD is valid (at least 2 characters)
+                const tld = parts[parts.length - 1];
+                if (tld.length < 2 || !/^[a-zA-Z]+$/.test(tld)) return false;
+                
+                // Check each part except TLD
+                for (let i = 0; i < parts.length - 1; i++) {
+                    const part = parts[i];
+                    if (part.length === 0 || part.length > 63) return false;
+                    if (part.startsWith('-') || part.endsWith('-')) return false;
+                    if (!/^[a-zA-Z0-9-]+$/.test(part)) return false;
+                }
+                
+                return simpleDomainRegex.test(domain) || complexDomainRegex.test(domain);
+            }
+
+            static isValidIP(ip) {
+                const ipRegex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+                return ipRegex.test(ip);
+            }
+
+            static isValidPort(port) {
+                const portNum = parseInt(port);
+                return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
+            }
+
+            static parseTarget(target) {
+                if (!target || typeof target !== 'string') {
+                    return { valid: false, error: 'Invalid target format' };
+                }
+
+                target = target.trim();
+                
+                // Remove protocol if present
+                target = target.replace(/^https?:\/\//, '');
+                
+                // Remove www. prefix if present
+                target = target.replace(/^www\./, '');
+                
+                // Check if target has port
+                const portMatch = target.match(/^(.+):(\d+)$/);
+                
+                if (portMatch) {
+                    // Target has explicit port
+                    const [, host, port] = portMatch;
+                    
+                    if (!this.isValidPort(port)) {
+                        return { valid: false, error: 'Invalid port number (1-65535)' };
+                    }
+                    
+                    if (this.isValidIP(host)) {
+                        return {
+                            valid: true,
+                            type: 'ip',
+                            host: host,
+                            port: parseInt(port),
+                            formatted: `${host}:${port}`
+                        };
+                    } else if (this.isValidDomain(host)) {
+                        return {
+                            valid: true,
+                            type: 'domain',
+                            host: host,
+                            port: parseInt(port),
+                            formatted: `${host}:${port}`
+                        };
+                    } else {
+                        return { valid: false, error: 'Invalid host format' };
+                    }
+                } else {
+                    // Target without port - only allowed for domains
+                    if (this.isValidIP(target)) {
+                        return { valid: false, error: 'IP addresses must include a port (e.g., 192.168.1.1:80)' };
+                    } else if (this.isValidDomain(target)) {
+                        // Use default port 80 for domains without port
+                        return {
+                            valid: true,
+                            type: 'domain',
+                            host: target,
+                            port: 80,
+                            formatted: `${target}:80`,
+                            usingDefaultPort: true
+                        };
+                    } else {
+                        return { valid: false, error: 'Invalid domain format' };
+                    }
+                }
+            }
+
+            static validateTargetList(targets) {
+                if (!Array.isArray(targets)) {
+                    targets = targets.split('\n').map(t => t.trim()).filter(t => t.length > 0);
+                }
+
+                const results = {
+                    valid: [],
+                    invalid: [],
+                    warnings: [],
+                    summary: {
+                        total: targets.length,
+                        validCount: 0,
+                        invalidCount: 0,
+                        domainCount: 0,
+                        ipCount: 0,
+                        defaultPortCount: 0
+                    }
+                };
+
+                targets.forEach((target, index) => {
+                    const validation = this.parseTarget(target);
+                    
+                    if (validation.valid) {
+                        results.valid.push({
+                            original: target,
+                            ...validation,
+                            index
+                        });
+                        results.summary.validCount++;
+                        
+                        if (validation.type === 'domain') {
+                            results.summary.domainCount++;
+                        } else if (validation.type === 'ip') {
+                            results.summary.ipCount++;
+                        }
+                        
+                        if (validation.usingDefaultPort) {
+                            results.summary.defaultPortCount++;
+                        }
+                    } else {
+                        results.invalid.push({
+                            original: target,
+                            error: validation.error,
+                            index
+                        });
+                        results.summary.invalidCount++;
+                    }
+                });
+
+                // Generate warnings
+                if (results.summary.defaultPortCount > 0) {
+                    results.warnings.push(`${results.summary.defaultPortCount} targets using default ports (port 80 assumed)`);
+                }
+
+                if (results.summary.invalidCount > 0) {
+                    results.warnings.push(`${results.summary.invalidCount} invalid targets will be skipped`);
+                }
+
+                return results;
+            }
+        }
+
+        function parseTarget(target) {
+            if (!target || typeof target !== 'string') {
+                return { valid: false, error: 'Invalid target format' };
+            }
+
+            target = target.trim();
+            
+            // Remove protocol if present
+            target = target.replace(/^https?:\/\//, '');
+            
+            // Remove www. prefix if present
+            target = target.replace(/^www\./, '');
+            
+            // Check if target has port
+            const portMatch = target.match(/^(.+):(\d+)$/);
+            
+            if (portMatch) {
+                // Target has explicit port
+                const [, host, port] = portMatch;
+                
+                if (!isValidPort(port)) {
+                    return { valid: false, error: 'Invalid port number (1-65535)' };
+                }
+                
+                if (isValidIP(host)) {
+                    return {
+                        valid: true,
+                        type: 'ip',
+                        host: host,
+                        port: parseInt(port),
+                        formatted: `${host}:${port}`
+                    };
+                } else if (isValidDomain(host)) {
+                    return {
+                        valid: true,
+                        type: 'domain',
+                        host: host,
+                        port: parseInt(port),
+                        formatted: `${host}:${port}`
+                    };
+                } else {
+                    return { valid: false, error: 'Invalid host format' };
+                }
+            } else {
+                // Target without port - only allowed for domains
+                if (isValidIP(target)) {
+                    return { valid: false, error: 'IP addresses must include a port (e.g., 192.168.1.1:80)' };
+                } else if (isValidDomain(target)) {
+                    // Use default port 80 for domains without port
+                    return {
+                        valid: true,
+                        type: 'domain',
+                        host: target,
+                        port: 80,
+                        formatted: `${target}:80`,
+                        usingDefaultPort: true
+                    };
+                } else {
+                    return { valid: false, error: 'Invalid domain format' };
+                }
+            }
+        }
+
+        function isValidIP(ip) {
+            const ipRegex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+            return ipRegex.test(ip);
+        }
+
+        function isValidDomain(domain) {
+            // Remove protocol if present
+            domain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
+            
+            // Simple domain validation
+            const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+            
+            // Check length constraints
+            if (domain.length > 253 || domain.length < 4) return false;
+            
+            // Split by dots and check each part
+            const parts = domain.split('.');
+            if (parts.length < 2) return false;
+            
+            // Check if TLD is valid (at least 2 characters)
+            const tld = parts[parts.length - 1];
+            if (tld.length < 2 || !/^[a-zA-Z]+$/.test(tld)) return false;
+            
+            return domainRegex.test(domain);
+        }
+
+        function isValidPort(port) {
+            const portNum = parseInt(port);
+            return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
+        }
+
+        // Enhanced UI Controller with better validation
+        class EnhancedUIController {
+            constructor() {
+                this.activeAttacks = new Map();
+                this.systemStats = {};
+                this.networkStats = {};
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.setupValidation();
+                this.setupNetworkIntegration();
+                this.startPerformanceMonitoring();
+            }
+
+            setupEventListeners() {
+                // Form submissions
+                document.getElementById('single-attack-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleSingleAttack();
+                });
+
+                document.getElementById('multi-attack-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleMultiTargetAttack();
+                });
+
+                // Quick actions
+                document.getElementById('stop-all-btn').addEventListener('click', () => {
+                    this.stopAllAttacks();
+                });
+
+                // Network actions
+                document.getElementById('network-indicator').addEventListener('click', () => {
+                    this.showNetworkStatus();
+                });
+
+                // File uploads
+                this.setupFileHandlers();
+                
+                // Drag and drop
+                this.setupDragAndDrop();
+            }
+
+            setupValidation() {
+                // Real-time validation for single target
+                const singleTargetInput = document.getElementById('single-target');
+                singleTargetInput.addEventListener('input', debounce(() => {
+                    this.validateSingleTarget();
+                }, 300));
+
+                // Real-time validation for multi targets
+                const multiTargetsTextarea = document.getElementById('multi-targets');
+                multiTargetsTextarea.addEventListener('input', debounce(() => {
+                    this.validateMultiTargets();
+                }, 500));
+
+                // Thread validation
+                ['single-threads', 'multi-threads'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', debounce(() => {
+                        this.validateThreadCount(id);
+                    }, 300));
+                });
+            }
+
+            validateSingleTarget() {
+                const input = document.getElementById('single-target');
+                const target = input.value.trim();
+                
+                if (!target) {
+                    this.setValidationState(input, 'neutral');
+                    return;
+                }
+
+                const validation = TargetValidator.parseTarget(target);
+                
+                if (validation.valid) {
+                    let message = `Valid ${validation.type}`;
+                    if (validation.usingDefaultPort) {
+                        message += ` (using default port ${validation.port})`;
+                        this.setValidationState(input, 'warning', message);
+                    } else {
+                        this.setValidationState(input, 'success', message);
+                    }
+                    
+                    // Update the input value to show the formatted version
+                    if (validation.usingDefaultPort && !input.value.includes(':')) {
+                        // Don't auto-modify user input, just show in validation message
+                    }
+                } else {
+                    this.setValidationState(input, 'error', validation.error);
+                }
+            }
+
+            validateMultiTargets() {
+                const textarea = document.getElementById('multi-targets');
+                const targetCountSpan = document.getElementById('target-count');
+                const targets = textarea.value.split('\n').map(t => t.trim()).filter(t => t.length > 0);
+                
+                if (targets.length === 0) {
+                    targetCountSpan.textContent = '0 targets';
+                    this.setValidationState(textarea, 'neutral');
+                    return;
+                }
+
+                const validation = TargetValidator.validateTargetList(targets);
+                
+                // Update count
+                targetCountSpan.textContent = `${validation.summary.validCount}/${validation.summary.total} targets`;
+                
+                // Set validation state
+                if (validation.summary.invalidCount === 0) {
+                    if (validation.warnings.length > 0) {
+                        this.setValidationState(textarea, 'warning', validation.warnings.join(', '));
+                    } else {
+                        this.setValidationState(textarea, 'success', 'All targets valid');
+                    }
+                } else if (validation.summary.validCount > 0) {
+                    this.setValidationState(textarea, 'warning', 
+                        `${validation.summary.invalidCount} invalid targets will be skipped`);
+                } else {
+                    this.setValidationState(textarea, 'error', 'No valid targets found');
+                }
+
+                // Update detailed validation info
+                this.updateTargetValidationDetails(validation);
+            }
+
+            updateTargetValidationDetails(validation) {
+                // Could show detailed breakdown in a tooltip or expandable section
+                console.log('Target validation results:', validation);
+            }
+
+            validateThreadCount(inputId) {
+                const input = document.getElementById(inputId);
+                const value = parseInt(input.value);
+                const min = parseInt(input.min) || 1;
+                const max = parseInt(input.max) || 1000;
+
+                if (isNaN(value) || value < min || value > max) {
+                    this.setValidationState(input, 'error', `Must be between ${min} and ${max}`);
+                } else {
+                    // Check system recommendations
+                    if (this.systemStats && this.systemStats.cpu) {
+                        const recommendedMax = this.systemStats.cpu.cores * 25;
+                        if (value > recommendedMax) {
+                            this.setValidationState(input, 'warning', 
+                                `High thread count may impact performance (recommended: <${recommendedMax})`);
+                        } else {
+                            this.setValidationState(input, 'success');
+                        }
+                    } else {
+                        this.setValidationState(input, 'success');
+                    }
+                }
+            }
+
+            setValidationState(element, state, message = '') {
+                // Remove existing validation classes
+                element.classList.remove('form-input-error', 'form-input-success', 'form-input-warning');
+
+                // Add new validation class
+                if (state === 'error') {
+                    element.classList.add('form-input-error');
+                } else if (state === 'success') {
+                    element.classList.add('form-input-success');
+                } else if (state === 'warning') {
+                    element.classList.add('form-input-warning');
+                }
+
+                // Update validation message
+                this.updateValidationMessage(element, message, state);
+            }
+
+            updateValidationMessage(element, message, state) {
+                let messageEl = element.parentNode.querySelector('.validation-message');
+                
+                if (message && state !== 'neutral') {
+                    if (!messageEl) {
+                        messageEl = document.createElement('div');
+                        messageEl.className = 'validation-message';
+                        element.parentNode.appendChild(messageEl);
+                    }
+                    messageEl.textContent = message;
+                    messageEl.className = `validation-message ${state} block`;
+                } else if (messageEl) {
+                    messageEl.remove();
+                }
+            }
+
+            setupNetworkIntegration() {
+                // Listen for attack progress updates if electronAPI is available
+                if (window.electronAPI && window.electronAPI.onAttackProgress) {
+                    window.electronAPI.onAttackProgress((data) => {
+                        this.updateAttackProgress(data.attackId, data);
+                    });
+                }
+
+                if (window.electronAPI && window.electronAPI.onAttackCompleted) {
+                    window.electronAPI.onAttackCompleted((data) => {
+                        this.removeActiveAttack(data.attackId);
+                        this.showNotification(
+                            `Attack ${data.success ? 'completed' : 'failed'}: ${data.target || 'Unknown'}`,
+                            data.success ? 'success' : 'error'
+                        );
+                    });
+                }
+
+                // Update network status periodically
+                setInterval(() => {
+                    this.updateNetworkStatus();
+                }, window.appConfig.updateIntervals.network);
+
+                // Initialize network status
+                this.updateNetworkStatus();
+            }
+
+            async updateNetworkStatus() {
+                try {
+                    // Get coordination status if available
+                    if (window.electronAPI && window.electronAPI.getCoordinationStatus) {
+                        const response = await window.electronAPI.getCoordinationStatus();
+                        if (response.success) {
+                            this.updateNetworkDisplay(response.data);
+                        }
+                    }
+
+                    // Update network manager integration
+                    if (window.networkManager) {
+                        const networkStatus = window.networkManager.networkStatus;
+                        this.updateNetworkStats(networkStatus);
+                    }
+                } catch (error) {
+                    console.warn('Failed to update network status:', error);
+                }
+            }
+
+            updateNetworkDisplay(coordinationData) {
+                const networkIndicator = document.getElementById('network-indicator');
+                const networkText = document.getElementById('network-text');
+                const networkPeers = document.getElementById('network-peers');
+                const peerStatus = document.getElementById('peer-status');
+
+                if (coordinationData.isolatedMode) {
+                    networkIndicator.className = 'w-2 h-2 bg-yellow-500 rounded-full';
+                    networkText.textContent = 'Isolated';
+                    networkText.className = 'text-yellow-400';
+                } else {
+                    networkIndicator.className = 'w-2 h-2 bg-green-500 rounded-full animate-pulse';
+                    networkText.textContent = 'Connected';
+                    networkText.className = 'text-green-400';
+                }
+
+                if (networkPeers) {
+                    networkPeers.textContent = coordinationData.verifiedPeers || 1;
+                }
+
+                if (peerStatus) {
+                    peerStatus.textContent = coordinationData.isolatedMode ? 'Local machine' : 
+                        `${coordinationData.verifiedPeers} verified peers`;
+                }
+            }
+
+            updateNetworkStats(networkStats) {
+                // Update network tab counter
+                const networkTabCount = document.getElementById('network-tab-count');
+                if (networkTabCount && networkStats.totalPeers) {
+                    networkTabCount.textContent = networkStats.totalPeers.toString();
+                }
+            }
+
+            handleAttackResponse(response, type) {
+                if (response?.success) {
+                    const targetCount = type === 'multi' ? 
+                        (response.data?.targets?.length || 1) : 1;
+                    
+                    this.showNotification(
+                        `${type === 'single' ? 'Single' : 'Multi'} target attack started on ${targetCount} target${targetCount > 1 ? 's' : ''}`, 
+                        'success'
+                    );
+                    
+                    if (response.data) {
+                        this.addAttackToDisplay(response.data);
+                        this.addLog(`Attack started: ${response.data.id}`, 'info');
+                    }
+                } else {
+                    // Handle resource validation errors differently
+                    if (response?.resourceError) {
+                        this.showNotification(response.error, 'error');
+                        // Don't log as generic error since it's a validation issue
+                        this.addLog(`Resource validation failed: ${response.error}`, 'warning');
+                    } else {
+                        this.showNotification(`Failed to start attack: ${response?.error || 'Unknown error'}`, 'error');
+                        this.addLog(`Attack failed: ${response?.error || 'Unknown error'}`, 'error');
+                    }
+                }
+            }
+
+            async pauseAttack(attackId) {
+                try {
+                    if (window.electronAPI && window.electronAPI.pauseAttack) {
+                        const response = await window.electronAPI.pauseAttack(attackId);
+                        if (response.success) {
+                            const attack = this.activeAttacks.get(attackId);
+                            if (attack) {
+                                attack.status = 'paused';
+                                this.updateAttackDisplay();
+                            }
+                            this.showNotification('Attack paused', 'info');
+                        }
+                    } else {
+                        // Demo mode
+                        const attack = this.activeAttacks.get(attackId);
+                        if (attack) {
+                            attack.status = 'paused';
+                            this.updateAttackDisplay();
+                            this.showNotification('Demo attack paused', 'info');
+                        }
+                    }
+                } catch (error) {
+                    this.showNotification(`Error pausing attack: ${error.message}`, 'error');
+                }
+            }
+
+            async resumeAttack(attackId) {
+                try {
+                    if (window.electronAPI && window.electronAPI.resumeAttack) {
+                        const response = await window.electronAPI.resumeAttack(attackId);
+                        if (response.success) {
+                            const attack = this.activeAttacks.get(attackId);
+                            if (attack) {
+                                attack.status = 'running';
+                                this.updateAttackDisplay();
+                            }
+                            this.showNotification('Attack resumed', 'success');
+                        }
+                    } else {
+                        // Demo mode
+                        const attack = this.activeAttacks.get(attackId);
+                        if (attack) {
+                            attack.status = 'running';
+                            this.updateAttackDisplay();
+                            this.showNotification('Demo attack resumed', 'success');
+                        }
+                    }
+                } catch (error) {
+                    this.showNotification(`Error resuming attack: ${error.message}`, 'error');
+                }
+            }
+
+            viewAttackDetails(attackId) {
+                const attack = this.activeAttacks.get(attackId);
+                if (!attack) return;
+                
+                const targets = Array.isArray(attack.targets) ? attack.targets : [attack.target];
+                const startTime = new Date(attack.startTime).toLocaleString();
+                const elapsed = Math.floor((Date.now() - attack.startTime) / 1000);
+                
+                const content = `
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-semibold text-white mb-3">Attack Information</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">ID:</span>
+                                        <span class="text-white font-mono">${attack.id}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Method:</span>
+                                        <span class="text-white">${attack.method}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Layer:</span>
+                                        <span class="text-white">${attack.layer}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Threads:</span>
+                                        <span class="text-white">${attack.threads}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Duration:</span>
+                                        <span class="text-white">${this.formatTime(attack.duration)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-semibold text-white mb-3">Performance</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Status:</span>
+                                        <span class="text-white">${attack.status.toUpperCase()}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Progress:</span>
+                                        <span class="text-white">${Math.round(attack.progress)}%</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Bandwidth:</span>
+                                        <span class="text-white">${this.formatBytes(attack.currentBandwidth)}/s</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Success Rate:</span>
+                                        <span class="text-white">${Math.round(attack.successRate)}%</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Total Requests:</span>
+                                        <span class="text-white">${(attack.totalRequests || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <h4 class="font-semibold text-white mb-3">Targets (${targets.length})</h4>
+                            <div class="max-h-32 overflow-y-auto space-y-1">
+                                ${targets.map(target => `
+                                    <div class="text-sm text-gray-300 font-mono bg-gray-900/50 px-2 py-1 rounded">${target}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <h4 class="font-semibold text-white mb-3">Timeline</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Started:</span>
+                                    <span class="text-white">${startTime}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Elapsed:</span>
+                                    <span class="text-white">${this.formatTime(elapsed)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Remaining:</span>
+                                    <span class="text-white">${this.formatTime(Math.max(0, attack.duration - elapsed))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                this.showModal(`Attack Details - ${attack.target}`, content);
+            }
+            
+            async handleSingleAttack(event) {
+                try {
+                    // Validate form inputs
+                    if (!this.validateAllInputs()) {
+                        this.highlightErrors();
+                        this.showNotification('Please fix validation errors before starting attack', 'error');
+                        return;
+                    }
+
+                    const targetInput = document.getElementById('single-target');
+                    const targetValue = targetInput.value.trim();
+                    
+                    // Parse and format the target
+                    const targetValidation = parseTarget(targetValue);
+                    if (!targetValidation.valid) {
+                        this.showNotification(`Invalid target: ${targetValidation.error}`, 'error');
+                        return;
+                    }
+
+                    // Use the formatted target (with port)
+                    const formattedTarget = targetValidation.formatted;
+                    
+                    const layer = document.getElementById('single-layer').value;
+                    const method = document.getElementById('single-method').value;
+                    const duration = parseInt(document.getElementById('single-duration').value);
+                    const threads = parseInt(document.getElementById('single-threads').value);
+
+                    // ✅ NEW: Validate resources before starting attack
+                    if (window.electronAPI && window.electronAPI.validateAttackResources) {
+                        try {
+                            const resourceValidation = await window.electronAPI.validateAttackResources(threads, 1);
+                            
+                            if (resourceValidation.success && !resourceValidation.data.isValid) {
+                                const recommendation = resourceValidation.data.recommendations[0];
+                                this.showNotification(
+                                    `Insufficient resources: ${recommendation?.message || 'Thread limit exceeded'}. ` +
+                                    `Try ${resourceValidation.data.recommendedThreads} threads instead.`, 
+                                    'error'
+                                );
+                                
+                                // Auto-adjust the thread input
+                                const threadsInput = document.getElementById('single-threads');
+                                threadsInput.value = resourceValidation.data.recommendedThreads;
+                                this.setValidationState(threadsInput, 'warning');
+                                this.hideLoadingOverlay(); // ✅ Important: Hide loading on validation failure
+                                return;
+                            }
+                            
+                            // Show warning if not optimal but still safe
+                            if (resourceValidation.success && !resourceValidation.data.isRecommended) {
+                                this.showNotification(
+                                    `Using ${threads} threads exceeds recommended limit but is still safe. ` +
+                                    `For optimal performance, try ${resourceValidation.data.recommendedThreads} threads.`, 
+                                    'warning'
+                                );
+                            }
+                            
+                        } catch (validationError) {
+                            console.warn('Resource validation failed:', validationError);
+                            // Continue with attack but show warning
+                            this.showNotification('Unable to validate resources, proceeding with caution', 'warning');
+                        }
+                    }
+
+                    const config = {
+                        target: formattedTarget,
+                        layer,
+                        method,
+                        duration,
+                        threads,
+                        ...this.getAdvancedOptions()
+                    };
+
+                    // Show warning if using default port
+                    if (targetValidation.usingDefaultPort) {
+                        this.showNotification(
+                            `Using default port 80 for ${targetValidation.host}`, 
+                            'info'
+                        );
+                    }
+
+                    this.showLoadingOverlay('Starting single target attack...');
+                    this.disableAttackButtons();
+
+                    if (window.electronAPI && window.electronAPI.startDDosAttack) {
+                        // ✅ Fixed: Pass parameters correctly
+                        const response = await window.electronAPI.startDDosAttack(
+                            formattedTarget, layer, method, duration, { threads, ...this.getAdvancedOptions() }
+                        );
+                        this.handleAttackResponse(response, 'single');
+                    } else {
+                        // Demo mode
+                        await this.simulateAttackStart(config, 'single');
+                    }
+
+                    // Clear form on success
+                    if (response?.success || !window.electronAPI) {
+                        document.getElementById('single-attack-form').reset();
+                        this.setValidationState(targetInput, 'neutral');
+                    }
+
+                } catch (error) {
+                    console.error('Attack error:', error);
+                    this.showNotification(`Error starting attack: ${error.message}`, 'error');
+                } finally {
+                    this.hideLoadingOverlay(); // ✅ Always hide loading
+                    this.enableAttackButtons();
+                }
+            }
+
+            async handleMultiAttack(event) {
+                try {
+                    if (!this.validateAllInputs()) {
+                        this.highlightErrors();
+                        this.showNotification('Please fix validation errors before starting attack', 'error');
+                        return;
+                    }
+
+                    const targetsTextarea = document.getElementById('multi-targets');
+                    
+                    // Use the stored validation results from validateMultiTargets
+                    if (!this.lastTargetValidation || this.lastTargetValidation.validCount === 0) {
+                        this.showNotification('No valid targets found', 'error');
+                        return;
+                    }
+
+                    // Extract formatted targets (with ports)
+                    const formattedTargets = this.lastTargetValidation.valid.map(t => t.formatted);
+                    
+                    const layer = document.getElementById('multi-layer').value;
+                    const method = document.getElementById('multi-method').value;
+                    const duration = parseInt(document.getElementById('multi-duration').value);
+                    const threadsPerTarget = parseInt(document.getElementById('multi-threads').value);
+                    const rampUpTime = parseInt(document.getElementById('multi-rampup').value);
+
+                    // ✅ NEW: Validate resources for multi-target attack
+                    if (window.electronAPI && window.electronAPI.validateAttackResources) {
+                        try {
+                            const resourceValidation = await window.electronAPI.validateAttackResources(
+                                threadsPerTarget, 
+                                formattedTargets.length
+                            );
+                            
+                            if (resourceValidation.success && !resourceValidation.data.isValid) {
+                                const totalRequested = resourceValidation.data.totalThreadsRequested;
+                                const maxSafe = resourceValidation.data.maxSafeThreads;
+                                const recommendedPerTarget = Math.floor(resourceValidation.data.recommendedThreads / formattedTargets.length);
+                                
+                                this.showNotification(
+                                    `Insufficient resources: ${totalRequested} total threads (${threadsPerTarget} × ${formattedTargets.length} targets) ` +
+                                    `exceeds safe limit of ${maxSafe}. Try ${recommendedPerTarget} threads per target.`, 
+                                    'error'
+                                );
+                                
+                                // Auto-adjust the threads per target input
+                                const threadsInput = document.getElementById('multi-threads');
+                                threadsInput.value = Math.max(1, recommendedPerTarget);
+                                this.setValidationState(threadsInput, 'warning');
+                                this.hideLoadingOverlay(); // ✅ Important: Hide loading on validation failure
+                                return;
+                            }
+                            
+                            // Show warning if not optimal but still safe
+                            if (resourceValidation.success && !resourceValidation.data.isRecommended) {
+                                const totalThreads = resourceValidation.data.totalThreadsRequested;
+                                const recommendedPerTarget = Math.floor(resourceValidation.data.recommendedThreads / formattedTargets.length);
+                                
+                                this.showNotification(
+                                    `${totalThreads} total threads exceeds recommended limit but is still safe. ` +
+                                    `For optimal performance, try ${recommendedPerTarget} threads per target.`, 
+                                    'warning'
+                                );
+                            }
+                            
+                        } catch (validationError) {
+                            console.warn('Resource validation failed:', validationError);
+                            // Continue with attack but show warning
+                            this.showNotification('Unable to validate resources, proceeding with caution', 'warning');
+                        }
+                    }
+
+                    const config = {
+                        targets: formattedTargets,
+                        layer,
+                        method,
+                        duration,
+                        threadsPerTarget,
+                        rampUpTime,
+                        ...this.getAdvancedOptions()
+                    };
+
+                    // Show warnings
+                    if (this.lastTargetValidation.summary.invalidCount > 0) {
+                        this.showNotification(
+                            `${this.lastTargetValidation.summary.invalidCount} invalid targets will be skipped`, 
+                            'warning'
+                        );
+                    }
+
+                    if (this.lastTargetValidation.summary.warningCount > 0) {
+                        this.showNotification(
+                            `${this.lastTargetValidation.summary.warningCount} targets using default port 80`, 
+                            'info'
+                        );
+                    }
+
+                    this.showLoadingOverlay(`Starting multi-target attack on ${formattedTargets.length} targets...`);
+                    this.disableAttackButtons();
+
+                    if (window.electronAPI && window.electronAPI.startMultiTargetAttack) {
+                        const response = await window.electronAPI.startMultiTargetAttack(config);
+                        this.handleAttackResponse(response, 'multi');
+                    } else {
+                        // Demo mode
+                        await this.simulateAttackStart(config, 'multi');
+                    }
+
+                    // Clear form on success
+                    if (response?.success || !window.electronAPI) {
+                        document.getElementById('multi-attack-form').reset();
+                        this.setValidationState(targetsTextarea, 'neutral');
+                        this.updateTargetCount();
+                    }
+
+                } catch (error) {
+                    console.error('Multi-target attack error:', error);
+                    this.showNotification(`Error starting multi-target attack: ${error.message}`, 'error');
+                } finally {
+                    this.hideLoadingOverlay(); // ✅ Always hide loading
+                    this.enableAttackButtons();
+                }
+            }
+
+            addActiveAttack(attackData) {
+                this.activeAttacks.set(attackData.id, {
+                    ...attackData,
+                    startTime: Date.now(),
+                    status: 'running',
+                    progress: 0,
+                    currentBandwidth: 0,
+                    successRate: 0,
+                    totalRequests: 0,
+                    errors: 0
+                });
+                this.updateActiveAttacksDisplay();
+                this.updateQuickStats();
+                this.refreshAttacksList();
+            }
+
+            updateAttackProgress(attackId, progressData) {
+                const attack = this.activeAttacks.get(attackId);
+                if (attack) {
+                    Object.assign(attack, {
+                        ...progressData,
+                        lastUpdate: Date.now()
+                    });
+                    this.updateActiveAttacksDisplay();
+                    this.updateQuickStats();
+                    this.refreshAttacksList();
+                }
+            }
+
+            removeActiveAttack(attackId) {
+                if (this.activeAttacks.has(attackId)) {
+                    this.activeAttacks.delete(attackId);
+                    this.updateActiveAttacksDisplay();
+                    this.updateQuickStats();
+                    this.refreshAttacksList();
+                }
+            }
+
+            refreshAttacksList() {
+                const attacksList = document.getElementById('active-attacks-list');
+                if (!attacksList) return;
+
+                const attacks = Array.from(this.activeAttacks.values());
+                
+                if (attacks.length === 0) {
+                    attacksList.innerHTML = `
+                        <div class="text-center text-gray-400 py-8">
+                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            <p>No active attacks</p>
+                            <p class="text-sm">Start an attack to see real-time statistics</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                attacksList.innerHTML = attacks.map(attack => this.createAttackCard(attack)).join('');
+            }
+
+            createAttackCard(attack) {
+                const duration = attack.startTime ? Math.floor((Date.now() - attack.startTime) / 1000) : 0;
+                const formattedDuration = this.formatDuration(duration * 1000);
+                
+                return `
+                    <div class="attack-card bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-medium text-white">${attack.target || 'Unknown Target'}</h4>
+                                <div class="flex items-center space-x-2 text-sm text-gray-400">
+                                    <span>${attack.method || 'Unknown'}</span>
+                                    <span>•</span>
+                                    <span>${attack.layer || 'Layer7'}</span>
+                                    <span>•</span>
+                                    <span>${formattedDuration}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="status-badge ${attack.status || 'running'}">${(attack.status || 'running').toUpperCase()}</span>
+                                <button onclick="window.enhancedUIController.stopSingleAttack('${attack.id}')" 
+                                        class="text-red-400 hover:text-red-300 p-1" title="Stop Attack">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h6v4H9z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-3 text-sm mb-3">
+                            <div>
+                                <span class="text-gray-400">Bandwidth:</span>
+                                <div class="text-white font-medium">${this.formatBytes(attack.currentBandwidth || 0)}/s</div>
+                            </div>
+                            <div>
+                                <span class="text-gray-400">Requests:</span>
+                                <div class="text-white font-medium">${(attack.totalRequests || 0).toLocaleString()}</div>
+                            </div>
+                            <div>
+                                <span class="text-gray-400">Success:</span>
+                                <div class="text-white font-medium">${attack.successRate || 0}%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div class="progress-bar h-2 rounded-full" style="width: ${attack.progress || 0}%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>Progress: ${attack.progress || 0}%</span>
+                            <span>Errors: ${attack.errors || 0}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            async stopSingleAttack(attackId) {
+                try {
+                    const response = await window.electronAPI.stopAttack(attackId);
+                    if (response.success) {
+                        this.removeActiveAttack(attackId);
+                        this.showNotification('Attack stopped', 'success');
+                    } else {
+                        this.showNotification(`Failed to stop attack: ${response.error}`, 'error');
+                    }
+                } catch (error) {
+                    this.showNotification(`Failed to stop attack: ${error.message}`, 'error');
+                }
+            }
+
+            formatDuration(ms) {
+                const seconds = Math.floor(ms / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const hours = Math.floor(minutes / 60);
+
+                if (hours > 0) {
+                    return `${hours}h ${minutes % 60}m`;
+                } else if (minutes > 0) {
+                    return `${minutes}m ${seconds % 60}s`;
+                } else {
+                    return `${seconds}s`;
+                }
+            }
+
+            updateActiveAttacksDisplay() {
+                const count = this.activeAttacks.size;
+                
+                // Update main counter
+                document.getElementById('active-attacks-count').textContent = count;
+                document.getElementById('header-attacks').textContent = count;
+                
+                // Update attacks tab counter
+                const attacksTabCount = document.getElementById('attacks-tab-count');
+                if (attacksTabCount) {
+                    attacksTabCount.textContent = count.toString();
+                }
+
+                // Update stop all button state
+                const stopAllBtn = document.getElementById('stop-all-btn');
+                if (stopAllBtn) {
+                    stopAllBtn.disabled = count === 0;
+                }
+
+                // Update status text
+                const attacksStatus = document.getElementById('attacks-status');
+                if (attacksStatus) {
+                    if (count === 0) {
+                        attacksStatus.textContent = 'Ready to start';
+                    } else if (count === 1) {
+                        attacksStatus.textContent = '1 attack running';
+                    } else {
+                        attacksStatus.textContent = `${count} attacks running`;
+                    }
+                }
+            }
+
+            updateQuickStats() {
+                // Update bandwidth, success rate, etc.
+                let totalBandwidth = 0;
+                let totalRequests = 0;
+                let successfulRequests = 0;
+
+                this.activeAttacks.forEach(attack => {
+                    totalBandwidth += attack.currentBandwidth || 0;
+                    totalRequests += attack.totalRequests || 0;
+                    successfulRequests += attack.successfulRequests || 0;
+                });
+
+                // Update bandwidth display
+                document.getElementById('total-bandwidth').textContent = this.formatBytes(totalBandwidth) + '/s';
+
+                // Update success rate
+                const successRate = totalRequests > 0 ? Math.round((successfulRequests / totalRequests) * 100) : 100;
+                document.getElementById('success-rate').textContent = successRate + '%';
+                document.getElementById('total-requests').textContent = totalRequests.toLocaleString() + ' requests';
+            }
+
+            async stopAllAttacks() {
+                try {
+                    this.showLoading('Stopping all attacks...');
+                    
+                    const response = await window.electronAPI.stopAllAttacks();
+                    
+                    this.hideLoading();
+
+                    if (response.success) {
+                        this.activeAttacks.clear();
+                        this.updateActiveAttacksDisplay();
+                        this.showNotification('All attacks stopped', 'success');
+                    } else {
+                        this.showNotification(`Failed to stop attacks: ${response.error}`, 'error');
+                    }
+                } catch (error) {
+                    this.hideLoading();
+                    this.showNotification(`Failed to stop attacks: ${error.message}`, 'error');
+                }
+            }
+
+            startPerformanceMonitoring() {
+                setInterval(async () => {
+                    await this.updateSystemStats();
+                }, window.appConfig.updateIntervals.system);
+            }
+
+            async updateSystemStats() {
+                try {
+                    const response = await window.electronAPI.getPerformanceMetrics();
+                    if (response.success) {
+                        this.systemStats = response.data.performance;
+                        this.updateSystemDisplay();
+                    }
+                } catch (error) {
+                    console.warn('Failed to update system stats:', error);
+                }
+            }
+
+            updateSystemDisplay() {
+                if (!this.systemStats) return;
+
+                // Update CPU
+                const cpuUsage = Math.round(this.systemStats.cpu?.usage || 0);
+                document.getElementById('cpu-usage').textContent = cpuUsage + '%';
+                document.getElementById('header-cpu').textContent = cpuUsage + '%';
+                document.getElementById('cpu-bar').style.width = cpuUsage + '%';
+                document.getElementById('cpu-cores').textContent = this.systemStats.cpu?.cores || 0;
+                document.getElementById('cpu-load').textContent = (this.systemStats.cpu?.loadAverage?.[0] || 0).toFixed(1);
+
+                // Update Memory
+                const memoryUsage = Math.round(this.systemStats.memory?.usage || 0);
+                document.getElementById('memory-usage').textContent = memoryUsage + '%';
+                document.getElementById('header-memory').textContent = memoryUsage + '%';
+                document.getElementById('memory-bar').style.width = memoryUsage + '%';
+                document.getElementById('memory-free').textContent = 
+                    this.formatBytes(this.systemStats.memory?.free || 0, 'GB');
+                document.getElementById('memory-total').textContent = 
+                    this.formatBytes(this.systemStats.memory?.total || 0, 'GB');
+            }
+
+            showNetworkStatus() {
+                // Show detailed network status modal
+                this.showNotification('Network status details - feature coming soon', 'info');
+            }
+
+            setupFileHandlers() {
+                // Target file upload
+                document.getElementById('upload-targets-btn').addEventListener('click', () => {
+                    document.getElementById('targets-file-input').click();
+                });
+
+                document.getElementById('targets-file-input').addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.handleTargetFileUpload(e.target.files[0]);
+                    }
+                });
+
+                // Proxy file upload
+                document.getElementById('upload-proxies-btn').addEventListener('click', () => {
+                    document.getElementById('proxy-file-input').click();
+                });
+
+                document.getElementById('proxy-file-input').addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.handleProxyFileUpload(e.target.files[0]);
+                    }
+                });
+            }
+
+            setupDragAndDrop() {
+                const multiTargetsTextarea = document.getElementById('multi-targets');
+                const dropOverlay = document.getElementById('drop-zone-overlay');
+
+                multiTargetsTextarea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropOverlay.classList.remove('hidden');
+                });
+
+                multiTargetsTextarea.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    if (!multiTargetsTextarea.contains(e.relatedTarget)) {
+                        dropOverlay.classList.add('hidden');
+                    }
+                });
+
+                multiTargetsTextarea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropOverlay.classList.add('hidden');
+                    
+                    const files = Array.from(e.dataTransfer.files);
+                    if (files.length > 0) {
+                        this.handleTargetFileUpload(files[0]);
+                    }
+                });
+            }
+
+            handleTargetFileUpload(file) {
+                if (!file.type.includes('text')) {
+                    this.showNotification('Please upload a text file', 'error');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    const targets = content.split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0 && !line.startsWith('#'));
+                    
+                    document.getElementById('multi-targets').value = targets.join('\n');
+                    this.validateMultiTargets();
+                    this.showNotification(`Loaded ${targets.length} targets from ${file.name}`, 'success');
+                };
+                reader.readAsText(file);
+            }
+
+            handleProxyFileUpload(file) {
+                if (!file.type.includes('text')) {
+                    this.showNotification('Please upload a text file', 'error');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    const proxies = content.split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0 && !line.startsWith('#'));
+                    
+                    document.getElementById('proxy-list').value = proxies.join('\n');
+                    document.getElementById('proxy-count').textContent = `${proxies.length} proxies`;
+                    this.showNotification(`Loaded ${proxies.length} proxies from ${file.name}`, 'success');
+                };
+                reader.readAsText(file);
+            }
+
+            formatBytes(bytes, unit = 'auto') {
+                if (bytes === 0) return '0 B';
+                
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                
+                if (unit === 'auto') {
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                } else {
+                    const unitIndex = sizes.indexOf(unit.toUpperCase());
+                    if (unitIndex !== -1) {
+                        return parseFloat((bytes / Math.pow(k, unitIndex)).toFixed(1));
+                    }
+                    return bytes;
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                // Create toast notification
+                const toast = document.createElement('div');
+                toast.className = `toast max-w-sm bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-4 ${
+                    type === 'error' ? 'border-red-500' :
+                    type === 'success' ? 'border-green-500' :
+                    type === 'warning' ? 'border-yellow-500' :
+                    'border-blue-500'
+                }`;
+
+                const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+                
+                toast.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="text-lg">${icon}</span>
+                        <span class="text-white text-sm">${message}</span>
+                        <button class="text-gray-400 hover:text-white ml-auto" onclick="this.parentElement.parentElement.remove()">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+
+                const container = document.getElementById('toast-container');
+                container.appendChild(toast);
+
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    toast.classList.add('removing');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }, 5000);
+            }
+
+            showLoading(message = 'Loading...') {
+                const overlay = document.getElementById('loading-overlay');
+                const text = document.getElementById('loading-text');
+                const progress = document.getElementById('loading-progress');
+                const percentage = document.getElementById('loading-percentage');
+
+                text.textContent = message;
+                progress.style.width = '0%';
+                percentage.textContent = '0%';
+                overlay.classList.remove('hidden');
+
+                // Simulate progress
+                let currentProgress = 0;
+                const progressInterval = setInterval(() => {
+                    currentProgress += Math.random() * 20;
+                    if (currentProgress >= 90) {
+                        currentProgress = 90;
+                        clearInterval(progressInterval);
+                    }
+                    progress.style.width = currentProgress + '%';
+                    percentage.textContent = Math.round(currentProgress) + '%';
+                }, 200);
+
+                // Store interval for cleanup
+                this.loadingInterval = progressInterval;
+            }
+
+            hideLoading() {
+                const overlay = document.getElementById('loading-overlay');
+                const progress = document.getElementById('loading-progress');
+                const percentage = document.getElementById('loading-percentage');
+
+                // Complete progress
+                progress.style.width = '100%';
+                percentage.textContent = '100%';
+
+                // Clear interval
+                if (this.loadingInterval) {
+                    clearInterval(this.loadingInterval);
+                    this.loadingInterval = null;
+                }
+
+                // Hide after brief delay
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                }, 500);
+            }
+        }
+
+        // Utility function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Initialize enhanced UI when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize enhanced UI controller
+            window.enhancedUIController = new EnhancedUIController();
+            
+            // Setup attack progress monitoring
+            if (window.electronAPI) {
+                window.electronAPI.onAttackProgress = window.electronAPI.onAttackProgress || (() => {});
+                window.electronAPI.onAttackCompleted = window.electronAPI.onAttackCompleted || (() => {});
+                window.electronAPI.onAttackStarted = window.electronAPI.onAttackStarted || (() => {});
+            }
+            
+            // Initialize activity tab switching
+            document.querySelectorAll('.activity-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active from all tabs
+                    document.querySelectorAll('.activity-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                        content.classList.add('hidden');
+                    });
+                    
+                    // Add active to clicked tab
+                    tab.classList.add('active');
+                    const tabName = tab.dataset.tab;
+                    const content = document.getElementById(`${tabName}-tab`);
+                    if (content) {
+                        content.classList.add('active');
+                        content.classList.remove('hidden');
+                    }
+                });
+            });
+
+            // Initialize advanced settings panel
+            document.getElementById('advanced-settings-btn').addEventListener('click', () => {
+                document.getElementById('side-panel').classList.remove('translate-x-full');
+            });
+
+            document.getElementById('close-panel-btn').addEventListener('click', () => {
+                document.getElementById('side-panel').classList.add('translate-x-full');
+            });
+
+            // Initialize preset buttons
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const preset = btn.dataset.preset;
+                    applyPreset(preset);
+                });
+            });
+
+            // Initialize system info button
+            document.getElementById('system-info-btn').addEventListener('click', () => {
+                showSystemInfoModal();
+            });
+
+            // Initialize proxy count update
+            document.getElementById('proxy-list').addEventListener('input', (e) => {
+                const proxies = e.target.value.split('\n').filter(line => line.trim().length > 0);
+                document.getElementById('proxy-count').textContent = `${proxies.length} proxies`;
+            });
+
+            console.log('Enhanced UI initialized with improved target validation and attack tracking');
+        });
+
+        // Preset configurations
+        function applyPreset(preset) {
+            const presets = {
+                light: {
+                    threads: 10,
+                    duration: 30,
+                    threadsPerTarget: 5
+                },
+                medium: {
+                    threads: 50,
+                    duration: 60,
+                    threadsPerTarget: 20
+                },
+                heavy: {
+                    threads: 100,
+                    duration: 120,
+                    threadsPerTarget: 50
+                }
+            };
+
+            const config = presets[preset];
+            if (config) {
+                document.getElementById('single-threads').value = config.threads;
+                document.getElementById('single-duration').value = config.duration;
+                document.getElementById('multi-threads').value = config.threadsPerTarget;
+                document.getElementById('multi-duration').value = config.duration;
+
+                if (window.enhancedUIController) {
+                    window.enhancedUIController.showNotification(`Applied ${preset} preset`, 'success');
+                }
+            }
+        }
+
+        // System info modal
+        async function showSystemInfoModal() {
+            try {
+                const response = await window.electronAPI.getSystemInfo();
+                if (response.success) {
+                    const systemInfo = response.data;
+                    
+                    const content = `
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="text-lg font-semibold text-white mb-3">System Information</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-gray-800/50 rounded-lg p-4">
+                                        <h5 class="font-medium text-white mb-2">Platform</h5>
+                                        <p class="text-gray-300">${systemInfo.platform?.platformName || 'Unknown'}</p>
+                                        <p class="text-sm text-gray-400">${systemInfo.platform?.arch || ''} ${systemInfo.platform?.release || ''}</p>
+                                    </div>
+                                    <div class="bg-gray-800/50 rounded-lg p-4">
+                                        <h5 class="font-medium text-white mb-2">CPU</h5>
+                                        <p class="text-gray-300">${systemInfo.cpu?.cpuDetails?.model || 'Unknown CPU'}</p>
+                                        <p class="text-sm text-gray-400">${systemInfo.cpu?.cpuDetails?.cores || 0} cores</p>
+                                    </div>
+                                    <div class="bg-gray-800/50 rounded-lg p-4">
+                                        <h5 class="font-medium text-white mb-2">Memory</h5>
+                                        <p class="text-gray-300">${Math.round((systemInfo.memory?.totalPhysical || 0) / 1024 / 1024 / 1024)} GB Total</p>
+                                        <p class="text-sm text-gray-400">${Math.round((systemInfo.memory?.freePhysical || 0) / 1024 / 1024 / 1024)} GB Free</p>
+                                    </div>
+                                    <div class="bg-gray-800/50 rounded-lg p-4">
+                                        <h5 class="font-medium text-white mb-2">Network</h5>
+                                        <p class="text-gray-300">${systemInfo.network?.length || 0} Interfaces</p>
+                                        <p class="text-sm text-gray-400">IPv4 Ready</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${systemInfo.performance?.recommendations?.length > 0 ? `
+                                <div>
+                                    <h4 class="text-lg font-semibold text-white mb-3">Performance Recommendations</h4>
+                                    <div class="space-y-2">
+                                        ${systemInfo.performance.recommendations.map(rec => `
+                                            <div class="bg-${rec.level === 'high' ? 'red' : rec.level === 'medium' ? 'yellow' : 'blue'}-500/20 rounded-lg p-3">
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-${rec.level === 'high' ? 'red' : rec.level === 'medium' ? 'yellow' : 'blue'}-400 font-medium">${rec.type}</span>
+                                                    <span class="text-gray-300">${rec.message}</span>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+
+                    showModal('System Information', content);
+                }
+            } catch (error) {
+                if (window.enhancedUIController) {
+                    window.enhancedUIController.showNotification(`Failed to get system info: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Modal helper
+        function showModal(title, content) {
+            const overlay = document.getElementById('modal-overlay');
+            const modalContent = document.getElementById('modal-content');
+            
+            modalContent.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-semibold text-white">${title}</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-white transition-colors duration-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                ${content}
+            `;
+            
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.add('show');
+                modalContent.classList.add('scale-100');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('modal-overlay');
+            const modalContent = document.getElementById('modal-content');
+            
+            modalContent.classList.add('scale-95');
+            modalContent.classList.remove('scale-100');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('show');
+            }, 200);
+        }
+
+        // Handle escape key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('modal-overlay');
+                const sidePanel = document.getElementById('side-panel');
+                
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeModal();
+                } else if (sidePanel && !sidePanel.classList.contains('translate-x-full')) {
+                    sidePanel.classList.add('translate-x-full');
+                }
+            }
+        });
+
+        // Click outside to close modal
+        document.getElementById('modal-overlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                closeModal();
+            }
+        });
+    </script>
+
     <!-- Custom CSS -->
     <style>
         /* Toggle Switch Styling */
@@ -886,97 +2558,6 @@
             }
         }
 
-        /* Status Badge Styling */
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            text-transform: uppercase;
-        }
-
-        .status-badge.running {
-            background-color: rgba(16, 185, 129, 0.2);
-            color: #10b981;
-        }
-
-        .status-badge.stopping {
-            background-color: rgba(245, 158, 11, 0.2);
-            color: #f59e0b;
-        }
-
-        .status-badge.stopped {
-            background-color: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-        }
-
-        .status-badge.completed {
-            background-color: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
-        }
-
-        /* Progress Bar Styling */
-        .progress-bar {
-            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
-            transition: width 0.3s ease-in-out;
-        }
-
-        /* Pulse Animation for Active Elements */
-        .pulse-active {
-            animation: pulseGlow 2s infinite;
-        }
-
-        @keyframes pulseGlow {
-            0%, 100% {
-                box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
-            }
-            50% {
-                box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
-            }
-        }
-
-        /* Modal Animations */
-        #modal-overlay.show #modal-content {
-            transform: scale(1);
-        }
-
-        /* Toast Notifications */
-        .toast {
-            animation: toastSlideIn 0.3s ease-out;
-        }
-
-        .toast.removing {
-            animation: toastSlideOut 0.3s ease-in;
-        }
-
-        @keyframes toastSlideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes toastSlideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-
-        /* Drag and Drop Styling */
-        .drag-over {
-            border-color: #3b82f6 !important;
-            background-color: rgba(59, 130, 246, 0.1) !important;
-        }
-
         /* Validation Input Styling */
         .form-input-error {
             border-color: #ef4444 !important;
@@ -1010,30 +2591,35 @@
             color: #f59e0b;
         }
 
-        /* Error Shake Animation */
-        .error-shake {
-            animation: shake 0.5s ease-in-out;
+        /* Toast Notifications */
+        .toast {
+            animation: toastSlideIn 0.3s ease-out;
         }
 
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        .toast.removing {
+            animation: toastSlideOut 0.3s ease-in;
         }
 
-        /* Loading Spinner */
-        .spinner {
-            border: 4px solid rgba(59, 130, 246, 0.3);
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 2rem;
-            height: 2rem;
-            animation: spin 1s linear infinite;
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @keyframes toastSlideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
         }
 
         /* Theme Button Styling */
@@ -1087,6 +2673,17 @@
             backdrop-filter: blur(8px);
         }
 
+        /* Modal Animations */
+        #modal-overlay.show #modal-content {
+            transform: scale(1);
+        }
+
+        /* Drag and Drop Styling */
+        .drag-over {
+            border-color: #3b82f6 !important;
+            background-color: rgba(59, 130, 246, 0.1) !important;
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             #side-panel {
@@ -1105,325 +2702,6 @@
                 grid-template-columns: 1fr;
             }
         }
-
-        /* Dark mode enhancements */
-        @media (prefers-color-scheme: dark) {
-            .theme-card {
-                background: rgba(17, 24, 39, 0.9);
-            }
-            
-            .theme-input {
-                background: rgba(17, 24, 39, 0.9);
-            }
-        }
     </style>
-
-    <!-- Additional JavaScript for Enhanced Functionality -->
-    <script>
-        // Global configuration object
-        window.appConfig = {
-            maxFileSize: 10 * 1024 * 1024, // 10MB
-            supportedFileTypes: {
-                targets: ['.txt', '.list'],
-                proxies: ['.txt', '.list'],
-                config: ['.json']
-            },
-            updateIntervals: {
-                system: 2000,
-                attacks: 1000,
-                network: 3000
-            },
-            maxLogs: 1000,
-            autoSave: true
-        };
-
-        // Initialize tooltips and enhanced UI features
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize file input handlers
-            initializeFileInputs();
-            
-            // Initialize drag and drop
-            initializeDragAndDrop();
-            
-            // Initialize keyboard shortcuts
-            initializeKeyboardShortcuts();
-            
-            // Initialize real-time updates
-            initializeRealTimeUpdates();
-            
-            // Initialize validation
-            initializeValidation();
-            
-            console.log('Enhanced UI features initialized');
-        });
-
-        function initializeFileInputs() {
-            // Proxy file upload
-            document.getElementById('upload-proxies-btn').addEventListener('click', () => {
-                document.getElementById('proxy-file-input').click();
-            });
-
-            // Target file upload
-            document.getElementById('upload-targets-btn').addEventListener('click', () => {
-                document.getElementById('targets-file-input').click();
-            });
-
-            // Config file upload
-            document.getElementById('import-config-btn').addEventListener('click', () => {
-                document.getElementById('config-file-input').click();
-            });
-        }
-
-        function initializeDragAndDrop() {
-            const multiTargetsTextarea = document.getElementById('multi-targets');
-            const dropOverlay = document.getElementById('drop-zone-overlay');
-
-            multiTargetsTextarea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropOverlay.classList.remove('hidden');
-                multiTargetsTextarea.classList.add('drag-over');
-            });
-
-            multiTargetsTextarea.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                if (!multiTargetsTextarea.contains(e.relatedTarget)) {
-                    dropOverlay.classList.add('hidden');
-                    multiTargetsTextarea.classList.remove('drag-over');
-                }
-            });
-
-            multiTargetsTextarea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropOverlay.classList.add('hidden');
-                multiTargetsTextarea.classList.remove('drag-over');
-                
-                const files = Array.from(e.dataTransfer.files);
-                if (files.length > 0 && files[0].type === 'text/plain') {
-                    handleFileUpload(files[0], 'targets');
-                }
-            });
-        }
-
-        function initializeKeyboardShortcuts() {
-            document.addEventListener('keydown', (e) => {
-                // Ctrl+S - Save configuration
-                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                    e.preventDefault();
-                    if (window.uiController) {
-                        window.uiController.saveCurrentConfiguration();
-                    }
-                }
-                
-                // Ctrl+O - Open configuration
-                if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
-                    e.preventDefault();
-                    document.getElementById('config-file-input').click();
-                }
-                
-                // Space - Pause/Resume logs (when not in input)
-                if (e.key === ' ' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
-                    e.preventDefault();
-                    if (window.uiController) {
-                        window.uiController.toggleLogsPause();
-                    }
-                }
-                
-                // Escape - Close modals/panels
-                if (e.key === 'Escape') {
-                    const modal = document.getElementById('modal-overlay');
-                    const sidePanel = document.getElementById('side-panel');
-                    
-                    if (modal && !modal.classList.contains('hidden')) {
-                        if (window.uiController) {
-                            window.uiController.closeModal();
-                        }
-                    } else if (sidePanel && !sidePanel.classList.contains('translate-x-full')) {
-                        if (window.uiController) {
-                            window.uiController.closeSidePanel();
-                        }
-                    }
-                }
-            });
-        }
-
-        function initializeRealTimeUpdates() {
-            // Update target count in real-time
-            const multiTargetsTextarea = document.getElementById('multi-targets');
-            const targetCountSpan = document.getElementById('target-count');
-            
-            multiTargetsTextarea.addEventListener('input', () => {
-                const targets = multiTargetsTextarea.value.split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0);
-                targetCountSpan.textContent = `${targets.length} targets`;
-            });
-
-            // Update proxy count in real-time
-            const proxyListTextarea = document.getElementById('proxy-list');
-            const proxyCountSpan = document.getElementById('proxy-count');
-            
-            proxyListTextarea.addEventListener('input', () => {
-                const proxies = proxyListTextarea.value.split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0);
-                proxyCountSpan.textContent = `${proxies.length} proxies`;
-            });
-        }
-
-        function initializeValidation() {
-            // Real-time validation for single target
-            const singleTargetInput = document.getElementById('single-target');
-            singleTargetInput.addEventListener('input', debounce(() => {
-                validateTarget(singleTargetInput);
-            }, 300));
-
-            // Real-time validation for threads
-            const threadInputs = ['single-threads', 'multi-threads'];
-            threadInputs.forEach(id => {
-                const input = document.getElementById(id);
-                input.addEventListener('input', debounce(() => {
-                    validateThreadCount(input);
-                }, 300));
-            });
-        }
-
-        function validateTarget(input) {
-            const target = input.value.trim();
-            if (!target) {
-                setValidationState(input, 'neutral');
-                return;
-            }
-
-            // Basic URL/IP validation
-            const urlPattern = /^([a-zA-Z0-9.-]+):(\d+)$/;
-            const ipPattern = /^(\d{1,3}\.){3}\d{1,3}:\d+$/;
-            
-            if (urlPattern.test(target) || ipPattern.test(target)) {
-                setValidationState(input, 'success', 'Valid target format');
-            } else {
-                setValidationState(input, 'error', 'Invalid format. Use domain:port or IP:port');
-            }
-        }
-
-        function validateThreadCount(input) {
-            const value = parseInt(input.value);
-            const min = parseInt(input.min);
-            const max = parseInt(input.max);
-
-            if (isNaN(value) || value < min || value > max) {
-                setValidationState(input, 'error', `Must be between ${min} and ${max}`);
-            } else {
-                setValidationState(input, 'success');
-            }
-        }
-
-        function setValidationState(element, state, message = '') {
-            // Remove existing validation classes
-            element.classList.remove('form-input-error', 'form-input-success', 'form-input-warning');
-
-            // Add new validation class
-            if (state === 'error') {
-                element.classList.add('form-input-error');
-            } else if (state === 'success') {
-                element.classList.add('form-input-success');
-            } else if (state === 'warning') {
-                element.classList.add('form-input-warning');
-            }
-
-            // Update validation message
-            updateValidationMessage(element, message, state);
-        }
-
-        function updateValidationMessage(element, message, state) {
-            let messageEl = element.parentNode.querySelector('.validation-message');
-            
-            if (message) {
-                if (!messageEl) {
-                    messageEl = document.createElement('div');
-                    messageEl.className = 'validation-message';
-                    element.parentNode.appendChild(messageEl);
-                }
-                messageEl.textContent = message;
-                messageEl.className = `validation-message ${state}`;
-            } else if (messageEl) {
-                messageEl.remove();
-            }
-        }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        function handleFileUpload(file, type) {
-            if (file.size > window.appConfig.maxFileSize) {
-                showNotification('File too large. Maximum size is 10MB.', 'error');
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const content = e.target.result;
-                if (type === 'targets') {
-                    processTargetFile(content, file.name);
-                } else if (type === 'proxies') {
-                    processProxyFile(content, file.name);
-                } else if (type === 'config') {
-                    processConfigFile(content, file.name);
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function processTargetFile(content, filename) {
-            const targets = content.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0 && !line.startsWith('#'));
-            
-            document.getElementById('multi-targets').value = targets.join('\n');
-            document.getElementById('target-count').textContent = `${targets.length} targets`;
-            showNotification(`Loaded ${targets.length} targets from ${filename}`, 'success');
-        }
-
-        function processProxyFile(content, filename) {
-            const proxies = content.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0 && !line.startsWith('#'));
-            
-            document.getElementById('proxy-list').value = proxies.join('\n');
-            document.getElementById('proxy-count').textContent = `${proxies.length} proxies`;
-            showNotification(`Loaded ${proxies.length} proxies from ${filename}`, 'success');
-        }
-
-        function processConfigFile(content, filename) {
-            try {
-                const config = JSON.parse(content);
-                // Apply configuration through UI controller
-                if (window.uiController) {
-                    window.uiController.applyConfiguration(config);
-                    showNotification(`Configuration loaded from ${filename}`, 'success');
-                }
-            } catch (error) {
-                showNotification(`Invalid configuration file: ${error.message}`, 'error');
-            }
-        }
-
-        function showNotification(message, type = 'info') {
-            // Use existing notification system if available
-            if (window.uiController) {
-                window.uiController.showNotification(message, type);
-            } else {
-                // Fallback notification
-                console.log(`[${type.toUpperCase()}] ${message}`);
-            }
-        }
-    </script>
 </body>
 </html>

@@ -1,6 +1,27 @@
-// preload.js - Enhanced with Multi-Target Attacks & Networking
 const { contextBridge, ipcRenderer } = require('electron');
+
 contextBridge.exposeInMainWorld('electronAPI', {
+  // ===== INITIALIZATION EVENTS =====
+  onInitializationComplete: (callback) => {
+    ipcRenderer.on('initialization-complete', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('initialization-complete');
+  },
+
+  onInitializationError: (callback) => {
+    ipcRenderer.on('initialization-error', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('initialization-error');
+  },
+
+  onInitializationStage: (callback) => {
+    ipcRenderer.on('initialization-stage', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('initialization-stage');
+  },
+
+  checkInitializationStatus: async () => {
+    return await ipcRenderer.invoke('check-initialization-status');
+  },
+
+  // ===== EXISTING ATTACK FUNCTIONS =====
   startDDosAttack: async (target, layer, method, duration, options = {}) => {
     return await ipcRenderer.invoke('start-ddos-attack', {
       target,
@@ -51,42 +72,86 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return await ipcRenderer.invoke('validate-proxies', proxyList);
   },
 
-  startNetworking: async () => {
-    return await ipcRenderer.invoke('start-networking');
+  // ===== PRIVATE COORDINATION FUNCTIONS =====
+  getCoordinationStatus: async () => {
+    return await ipcRenderer.invoke('get-coordination-status');
   },
 
-  stopNetworking: async () => {
-    return await ipcRenderer.invoke('stop-networking');
+  sendCoordinationMessage: async (message) => {
+    return await ipcRenderer.invoke('send-coordination-message', message);
   },
 
-  getNetworkStats: async () => {
-    return await ipcRenderer.invoke('get-network-stats');
+  getMachineList: async () => {
+    return await ipcRenderer.invoke('get-machine-list');
   },
 
-  updateAttackStats: async (stats) => {
-    return await ipcRenderer.invoke('update-attack-stats', stats);
+  getMyMachineInfo: async () => {
+    return await ipcRenderer.invoke('get-my-machine-info');
   },
 
-  getPeerDetails: async () => {
-    return await ipcRenderer.invoke('get-peer-details');
+  refreshCoordinationNetwork: async () => {
+    return await ipcRenderer.invoke('refresh-coordination-network');
   },
 
-  testConnectivity: async () => {
-    return await ipcRenderer.invoke('test-connectivity');
+  // ===== COORDINATION EVENT LISTENERS =====
+  onCoordinatorInitialized: (callback) => {
+    ipcRenderer.on('coordinator:initialized', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('coordinator:initialized');
   },
 
-  discoverPeers: async () => {
-    return await ipcRenderer.invoke('discover-peers');
+  onPeerVerified: (callback) => {
+    ipcRenderer.on('coordinator:peer-verified', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('coordinator:peer-verified');
   },
 
-  getNetworkOptimizations: async () => {
-    return await ipcRenderer.invoke('get-network-optimizations');
+  onInvalidPeer: (callback) => {
+    ipcRenderer.on('coordinator:invalid-peer', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('coordinator:invalid-peer');
   },
 
-  exportNetworkData: async () => {
-    return await ipcRenderer.invoke('export-network-data');
+  onPeerStatusUpdate: (callback) => {
+    ipcRenderer.on('coordinator:peer-status-update', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('coordinator:peer-status-update');
   },
 
+  onPeerDisconnected: (callback) => {
+    ipcRenderer.on('coordinator:peer-disconnected', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('coordinator:peer-disconnected');
+  },
+
+  onNetworkIsolated: (callback) => {
+    ipcRenderer.on('coordinator:network-isolated', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('coordinator:network-isolated');
+  },
+
+  onNetworkReconnected: (callback) => {
+    ipcRenderer.on('coordinator:network-reconnected', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('coordinator:network-reconnected');
+  },
+
+  onNetworkStatsUpdate: (callback) => {
+    ipcRenderer.on('coordinator:network-stats-update', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('coordinator:network-stats-update');
+  },
+
+  onCoordinatorError: (callback) => {
+    ipcRenderer.on('coordinator:error', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('coordinator:error');
+  },
+
+  validateAttackResources: (threadCount, targetCount = 1) => 
+    ipcRenderer.invoke('validate-attack-resources', threadCount, targetCount),
+
+  getThreadLimits: () => 
+    ipcRenderer.invoke('get-thread-limits'),
+
+  calculateThreadLimits: () => 
+    ipcRenderer.invoke('calculate-thread-limits'),
+
+  getResourceRecommendations: (threadCount, limits) => 
+    ipcRenderer.invoke('get-resource-recommendations', threadCount, limits),
+
+  // ===== ATTACK EVENT LISTENERS =====
   onAttackProgress: (callback) => {
     ipcRenderer.on('attack-progress', (event, data) => callback(data));
     return () => ipcRenderer.removeAllListeners('attack-progress');
@@ -107,43 +172,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeAllListeners('log-message');
   },
 
-  onNetworkingStarted: (callback) => {
-    ipcRenderer.on('networking-started', (event, data) => callback(data));
-    return () => ipcRenderer.removeAllListeners('networking-started');
-  },
-
-  onPeerDiscovered: (callback) => {
-    ipcRenderer.on('peer-discovered', (event, data) => callback(data));
-    return () => ipcRenderer.removeAllListeners('peer-discovered');
-  },
-
-  onNetworkStatsUpdated: (callback) => {
-    ipcRenderer.on('network-stats-updated', (event, data) => callback(data));
-    return () => ipcRenderer.removeAllListeners('network-stats-updated');
-  },
-
-  onRelayConnected: (callback) => {
-    ipcRenderer.on('relay-connected', (event, data) => callback(data));
-    return () => ipcRenderer.removeAllListeners('relay-connected');
-  },
-
   onMonitoringData: (callback) => {
     ipcRenderer.on('monitoring-data', (event, data) => callback(data));
     return () => ipcRenderer.removeAllListeners('monitoring-data');
   },
 
-  removeAllListeners: () => {
-    ipcRenderer.removeAllListeners('attack-progress');
-    ipcRenderer.removeAllListeners('attack-completed');
-    ipcRenderer.removeAllListeners('resource-update');
-    ipcRenderer.removeAllListeners('log-message');
-    ipcRenderer.removeAllListeners('networking-started');
-    ipcRenderer.removeAllListeners('peer-discovered');
-    ipcRenderer.removeAllListeners('network-stats-updated');
-    ipcRenderer.removeAllListeners('relay-connected');
-    ipcRenderer.removeAllListeners('monitoring-data');
-  },
-
+  // ===== SYSTEM INFO FUNCTIONS =====
   getSystemInfo: async () => {
     return await ipcRenderer.invoke('get-system-info');
   },
@@ -200,10 +234,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return await ipcRenderer.invoke('export-system-info', { format });
   },
 
+  // ===== NAVIGATION =====
   navigateToMain: async () => {
     return await ipcRenderer.invoke('navigate-to-main');
   },
 
+  // ===== HELPER FUNCTIONS =====
   createSingleTargetConfig: (target, layer, method, duration, options = {}) => ({
     targets: [target],
     layer,
@@ -241,9 +277,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createProxyConfig: (proxyList, rotationStrategy = 'round-robin') => ({
     useProxies: true,
     proxyList,
-    rotationStrategy // 'round-robin', 'random', 'performance-based'
+    rotationStrategy
   }),
 
+  // ===== FORMATTING FUNCTIONS =====
   formatAttackStats: (stats) => ({
     duration: stats.duration ? `${stats.duration}s` : '0s',
     requestsPerSecond: stats.requestsPerSecond || 0,
@@ -254,25 +291,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     errors: stats.totalErrors || 0
   }),
 
-  // Network statistics formatting
-  formatNetworkStats: (stats) => ({
-    totalUsers: stats.totalOnlineUsers || 1,
-    totalBandwidth: formatBytes(stats.totalBandwidth || 0) + '/s',
-    topMachine: stats.topMachine ? `${formatBytes(stats.topMachine.bandwidth || 0)}/s` : 'You',
-    yourContribution: stats.yourBandwidth ? `${formatBytes(stats.yourBandwidth)}/s` : '0 B/s',
-    connectionMethods: stats.activeMethods || 0,
-    peers: stats.totalPeers || 0
+  formatCoordinationStats: (stats) => ({
+    verifiedPeers: stats.verifiedPeers || 0,
+    connectedRelays: stats.connectedRelays || 0,
+    networkId: stats.networkId || 'Unknown',
+    isolatedMode: stats.isolatedMode ? 'Isolated' : 'Connected',
+    lastPeerContact: stats.lastPeerContact ? new Date(stats.lastPeerContact).toLocaleTimeString() : 'Never',
+    status: stats.isolatedMode ? 'Standalone' : 'Networked'
   }),
 
-  getAppVersion: () => {
-    return process.env.npm_package_version || '1.0.0';
-  },
+  formatMachineInfo: (info) => ({
+    shortId: info.publicKey ? info.publicKey.substring(0, 8) : 'Unknown',
+    platform: info.capabilities?.platform || 'Unknown',
+    cpuCores: info.capabilities?.cpuCores || 0,
+    totalMemory: formatBytes(info.capabilities?.totalMemory || 0),
+    cpuUsage: `${info.performance?.cpuUsage || 0}%`,
+    memoryUsage: `${info.performance?.memoryUsage || 0}%`,
+    healthScore: info.healthScore || 0,
+    capabilityScore: info.capabilityScore || 0
+  }),
 
-  getPlatform: () => {
-    return process.platform;
-  },
-
-  // Enhanced bytes formatting
   formatBytes: (bytes, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -282,7 +320,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   },
 
-  // Enhanced uptime formatting
   formatUptime: (seconds) => {
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
@@ -300,7 +337,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
-  // Duration formatting for attacks
   formatDuration: (milliseconds) => {
     const seconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(seconds / 60);
@@ -315,48 +351,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
-  // Status color helper
-  getStatusColor: (percentage) => {
-    if (percentage < 50) return 'green';
-    if (percentage < 75) return 'orange';
-    return 'red';
-  },
-
-  // Recommendation level color
-  getRecommendationColor: (level) => {
-    switch (level) {
-      case 'good': return 'green';
-      case 'medium': return 'orange';
-      case 'high': return 'red';
-      case 'critical': return 'darkred';
-      default: return 'blue';
-    }
-  },
-
-  // Attack priority color
-  getAttackPriorityColor: (priority) => {
-    if (priority >= 3) return 'red';
-    if (priority >= 2) return 'orange';
-    return 'green';
-  },
-
-  // Network connection quality indicator
-  getNetworkQualityColor: (quality) => {
-    switch (quality) {
-      case 'excellent': return 'green';
-      case 'good': return 'lightgreen';
-      case 'fair': return 'orange';
-      case 'poor': return 'red';
-      default: return 'gray';
-    }
-  },
-
+  // ===== VALIDATION FUNCTIONS =====
   validateTarget: (target) => {
     if (!target || typeof target !== 'string') {
       return { valid: false, error: 'Target must be a non-empty string' };
     }
     
-    // Basic URL/IP validation
     const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?(\:\d+)?$/;
     const ipPattern = /^(\d{1,3}\.){3}\d{1,3}(\:\d+)?$/;
     const localhostPattern = /^localhost(\:\d+)?$/;
@@ -368,7 +368,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return { valid: false, error: 'Invalid target format. Use URL, IP address, or localhost' };
   },
 
-  // Validate proxy format
   validateProxy: (proxy) => {
     if (!proxy || typeof proxy !== 'string') {
       return { valid: false, error: 'Proxy must be a non-empty string' };
@@ -389,7 +388,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return { valid: true };
   },
 
-  // Validate attack configuration
   validateAttackConfigLocal: (config) => {
     const errors = [];
     
@@ -418,6 +416,52 @@ contextBridge.exposeInMainWorld('electronAPI', {
       errors
     };
   },
+
+  // ===== STATUS HELPERS =====
+  getStatusColor: (percentage) => {
+    if (percentage < 50) return 'green';
+    if (percentage < 75) return 'orange';
+    return 'red';
+  },
+
+  getHealthStatusColor: (healthScore) => {
+    if (healthScore >= 80) return 'green';
+    if (healthScore >= 60) return 'orange';
+    if (healthScore >= 40) return 'red';
+    return 'darkred';
+  },
+
+  getCapabilityStatusColor: (capabilityScore) => {
+    if (capabilityScore >= 75) return 'blue';
+    if (capabilityScore >= 50) return 'green';
+    if (capabilityScore >= 25) return 'orange';
+    return 'red';
+  },
+
+  getNetworkStatusColor: (isolatedMode) => {
+    return isolatedMode ? 'orange' : 'green';
+  },
+
+  // ===== UTILITY FUNCTIONS =====
+  removeAllListeners: () => {
+    ipcRenderer.removeAllListeners('attack-progress');
+    ipcRenderer.removeAllListeners('attack-completed');
+    ipcRenderer.removeAllListeners('resource-update');
+    ipcRenderer.removeAllListeners('log-message');
+    ipcRenderer.removeAllListeners('monitoring-data');
+    ipcRenderer.removeAllListeners('coordinator:initialized');
+    ipcRenderer.removeAllListeners('coordinator:peer-verified');
+    ipcRenderer.removeAllListeners('coordinator:invalid-peer');
+    ipcRenderer.removeAllListeners('coordinator:peer-status-update');
+    ipcRenderer.removeAllListeners('coordinator:peer-disconnected');
+    ipcRenderer.removeAllListeners('coordinator:network-isolated');
+    ipcRenderer.removeAllListeners('coordinator:network-reconnected');
+    ipcRenderer.removeAllListeners('coordinator:network-stats-update');
+    ipcRenderer.removeAllListeners('coordinator:error');
+    ipcRenderer.removeAllListeners('initialization-complete');
+    ipcRenderer.removeAllListeners('initialization-error');
+  },
+
   saveUIState: (key, data) => {
     try {
       localStorage.setItem(key, JSON.stringify(data));
@@ -448,12 +492,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
+  // ===== OPTIMIZATION HELPERS =====
   calculateOptimalThreads: (targets = 1, systemInfo = null) => {
     const cpuCores = systemInfo?.cpus?.length || 4;
     const baseThreads = Math.max(cpuCores * 2, 10);
     const maxThreadsPerTarget = Math.min(200, baseThreads);
     
-    // Adjust based on number of targets
     if (targets > 1) {
       return Math.max(10, Math.floor(maxThreadsPerTarget / Math.sqrt(targets)));
     }
@@ -461,7 +505,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return maxThreadsPerTarget;
   },
 
-  // Resource usage recommendations
   getResourceRecommendations: (stats) => {
     const recommendations = [];
     
@@ -492,6 +535,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return recommendations;
   },
 
+  // ===== DEBUGGING =====
   debugLog: (message, level = 'info', data = null) => {
     if (process.env.NODE_ENV === 'development') {
       const timestamp = new Date().toISOString();
@@ -513,19 +557,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
-  // Performance timing helper
   performanceTimer: () => {
     const start = performance.now();
     return {
       end: () => {
         const duration = performance.now() - start;
-        return Math.round(duration * 100) / 100; // Round to 2 decimal places
+        return Math.round(duration * 100) / 100;
       }
     };
+  },
+
+  // ===== PLATFORM INFO =====
+  getAppVersion: () => {
+    return process.env.npm_package_version || '2.0.0';
+  },
+
+  getPlatform: () => {
+    return process.platform;
   }
 });
 
-// Helper function (available globally in renderer)
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -535,13 +586,11 @@ function formatBytes(bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-// Optional: Handle any global events
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('MKenya Tool Enhanced - Multi-Target & Networking Ready');
+  console.log('MKenya Tool Enhanced - Private Network Coordination Ready');
   
-  // Initialize debug mode if in development
   if (process.env.NODE_ENV === 'development') {
-    window.electronAPI.debugLog('Enhanced MKenya Tool loaded successfully', 'info', {
+    window.electronAPI.debugLog('Enhanced MKenya Tool with Private Coordination loaded successfully', 'info', {
       platform: window.electronAPI.getPlatform(),
       version: window.electronAPI.getAppVersion()
     });

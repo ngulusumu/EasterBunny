@@ -1,4 +1,4 @@
-//networking/private-networking-coordinator.js
+//networking/private-network-coordinator.js
 const crypto = require('crypto');
 const { DecentralizedCoordinator } = require('./coordination-system');
 

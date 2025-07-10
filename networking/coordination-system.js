@@ -1,3 +1,4 @@
+//networking/coordination-system.js
 // file: networking/coordination-system.js
 const { app } = require('electron');
 const crypto = require('crypto');

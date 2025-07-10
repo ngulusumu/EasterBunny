@@ -1,4 +1,4 @@
-// networking/coordinator-preload.js
+//networking/coordination-preload.js
 const crypto = require('crypto');
 const { DecentralizedCoordinator } = require('./coordination-system');
 

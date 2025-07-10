@@ -229,6 +229,5 @@ process.on('SIGINT', () => {
     coordinator.connections.forEach(ws => ws.close());
     process.exit(0);
 });
-
 console.log(`💡 ${machineName} is starting up...`);
 console.log(`💡 Press Ctrl+C to exit`);

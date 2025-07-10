@@ -1,0 +1,19 @@
+{
+  "name": "mkenyatool-network-test",
+  "version": "1.0.0",
+  "description": "Network coordination test for MKenya Tool",
+  "main": "test-coordination.js",
+  "scripts": {
+    "test": "node test-coordination.js",
+    "kenya": "node test-coordination.js Kenya-Machine",
+    "usa": "node test-coordination.js USA-Machine",
+    "machine1": "node test-coordination.js Machine-1", 
+    "machine2": "node test-coordination.js Machine-2"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "elliptic": "^6.5.4"
+  },
+  "author": "MKenya Tool",
+  "license": "MIT"
+}

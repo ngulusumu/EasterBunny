@@ -1,3 +1,4 @@
+//networking/coordination-integration.js
 const { app, BrowserWindow, ipcMain, Menu, Tray } = require('electron');
 const path = require('path');
 const { PrivateNetworkCoordinator } = require('./private-network-coordinator');

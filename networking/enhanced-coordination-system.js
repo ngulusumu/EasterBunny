@@ -1,3 +1,4 @@
+//networking/enhanced-coordination-system.js
 const crypto = require('crypto');
 const os = require('os');
 const path = require('path');

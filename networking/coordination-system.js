@@ -1,3 +1,4 @@
+//networking/coordination-system.js
 const { app } = require('electron');
 const crypto = require('crypto');
 const fs = require('fs').promises;

@@ -1,3 +1,4 @@
+//file systeminfo/systeminfo_win.js
 const { exec, spawn } = require('child_process');
 const os = require('os');
 const fs = require('fs').promises;

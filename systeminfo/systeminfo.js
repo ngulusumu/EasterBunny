@@ -1,21 +1,41 @@
+//systeminfo/optimized-systeminfo.js
 const os = require('os');
 const path = require('path');
 const EventEmitter = require('events');
+const { ResourceOptimizationManager } = require('../networking/resource-optimization-manager');
 
-class SystemInfoManager extends EventEmitter {
+class OptimizedSystemInfoManager extends EventEmitter {
     constructor() {
         super();
         this.platform = os.platform();
         this.systemInfo = null;
-        this.monitoringSession = null;
-        this.memoryCache = null;
-        this.memoryCacheTime = 0;
-        this.lastMonitoringData = null;
-        this.CACHE_DURATION = 2000; // 2 seconds cache for memory info
+        this.resourceManager = ResourceOptimizationManager.getInstance();
+        
+        // Optimized caching with different TTLs
+        this.cacheConfig = {
+            basic: { ttl: 30000, key: 'basic_info' },           // 30 seconds
+            cpu: { ttl: 5000, key: 'cpu_info' },               // 5 seconds
+            memory: { ttl: 2000, key: 'memory_info' },         // 2 seconds  
+            disk: { ttl: 60000, key: 'disk_info' },            // 1 minute
+            network: { ttl: 30000, key: 'network_info' },      // 30 seconds
+            processes: { ttl: 10000, key: 'processes_info' },  // 10 seconds
+            performance: { ttl: 3000, key: 'performance_info' } // 3 seconds
+        };
+        
+        // Monitoring state
+        this.isMonitoring = false;
+        this.monitoringOptions = null;
+        this.lastFullSystemScan = 0;
+        this.fullSystemScanInterval = 300000; // 5 minutes
+        
+        // Performance tracking
+        this.callCounts = new Map();
+        this.executionTimes = new Map();
+        
         this.initializeSystemInfo();
+        this.setupOptimizedCaching();
     }
 
-    // Initialize the appropriate system info class based on platform
     initializeSystemInfo() {
         try {
             switch (this.platform) {
@@ -33,124 +53,57 @@ class SystemInfoManager extends EventEmitter {
                     break;
                 default:
                     console.warn(`Platform ${this.platform} not fully supported, using basic fallback`);
-                    this.systemInfo = new BasicSystemInfo();
+                    this.systemInfo = new OptimizedBasicSystemInfo();
             }
         } catch (error) {
             console.error('Error initializing system info:', error);
-            // Fallback to basic system info
-            this.systemInfo = new BasicSystemInfo();
+            this.systemInfo = new OptimizedBasicSystemInfo();
         }
     }
 
-    // Get platform information
-    getPlatformInfo() {
-        return {
-            platform: this.platform,
-            platformName: this.getPlatformName(),
-            arch: os.arch(),
-            release: os.release(),
-            hostname: os.hostname(),
-            nodeVersion: process.version,
-            electronVersion: process.versions.electron || 'Not running in Electron'
-        };
+    setupOptimizedCaching() {
+        // Clean up caches periodically
+        this.resourceManager.createInterval(() => {
+            this.cleanupOldCaches();
+        }, 60000, 'systeminfo_cache_cleanup');
     }
 
-    // Get human-readable platform name
-    getPlatformName() {
-        const platformNames = {
-            'win32': 'Windows',
-            'linux': 'Linux',
-            'darwin': 'macOS',
-            'freebsd': 'FreeBSD',
-            'openbsd': 'OpenBSD',
-            'sunos': 'SunOS'
-        };
-        return platformNames[this.platform] || 'Unknown';
+    cleanupOldCaches() {
+        // This is handled by the resource manager, but we can add specific logic
+        const stats = this.getPerformanceStats();
+        if (stats.cacheHitRate < 0.5) { // Low hit rate, clear caches
+            this.clearAllCaches();
+        }
     }
 
-    // Get basic system information (works on all platforms)
+    // ===============================
+    // OPTIMIZED DATA RETRIEVAL
+    // ===============================
+
     async getBasicInfo() {
-        try {
+        return this.getCachedOrFetch('basic', async () => {
             if (this.systemInfo && typeof this.systemInfo.getBasicSystemInfo === 'function') {
                 return await this.systemInfo.getBasicSystemInfo();
             } else {
                 return this.getFallbackBasicInfo();
             }
-        } catch (error) {
-            console.error('Error getting basic info:', error);
-            return this.getFallbackBasicInfo();
-        }
+        });
     }
 
-    // Fallback basic info using Node.js os module
-    getFallbackBasicInfo() {
-        return {
-            hostname: os.hostname(),
-            platform: os.platform(),
-            architecture: os.arch(),
-            release: os.release(),
-            uptime: os.uptime(),
-            userInfo: os.userInfo(),
-            homeDirectory: os.homedir(),
-            tempDirectory: os.tmpdir(),
-            totalMemory: os.totalmem(),
-            freeMemory: os.freemem(),
-            cpuCount: os.cpus().length,
-            cpuModel: os.cpus()[0]?.model || 'Unknown',
-            loadAverage: os.loadavg(),
-            memoryUsage: process.memoryUsage(),
-            nodeVersion: process.version
-        };
-    }
-
-    // Get comprehensive system information - FIXED
-    async getAllSystemInfo() {
-        try {
-            const platformInfo = this.getPlatformInfo();
-            
-            if (this.systemInfo && typeof this.systemInfo.getAllSystemInfo === 'function') {
-                const detailedInfo = await this.systemInfo.getAllSystemInfo();
-                return {
-                    ...detailedInfo,
-                    platform: platformInfo
-                };
-            } else {
-                // Fallback to basic info
-                const basicInfo = await this.getBasicInfo();
-                return {
-                    timestamp: new Date().toISOString(),
-                    platform: platformInfo,
-                    basic: basicInfo,
-                    message: `Detailed system info not available for ${this.getPlatformName()}`
-                };
-            }
-        } catch (error) {
-            console.error('Error getting all system info:', error);
-            throw error;
-        }
-    }
-
-    // Alias for compatibility
-    async getSystemInfo() {
-        return await this.getAllSystemInfo();
-    }
-
-    // Get CPU information - IMPROVED
     async getCPUInfo() {
-        try {
+        return this.getCachedOrFetch('cpu', async () => {
             if (this.systemInfo && typeof this.systemInfo.getCPUInfo === 'function') {
                 const platformCpuInfo = await this.systemInfo.getCPUInfo();
                 
-                // Ensure we always return consistent format
                 return {
                     cpuCores: platformCpuInfo.cpuCores || os.cpus(),
                     cpuCount: platformCpuInfo.cpuCount || platformCpuInfo.cpuCores?.length || os.cpus().length,
-                    cores: platformCpuInfo.cpuCount || platformCpuInfo.cpuCores?.length || os.cpus().length, // For compatibility
+                    cores: platformCpuInfo.cpuCount || platformCpuInfo.cpuCores?.length || os.cpus().length,
                     cpuModel: platformCpuInfo.cpuModel || os.cpus()[0]?.model || 'Unknown',
-                    model: platformCpuInfo.cpuModel || os.cpus()[0]?.model || 'Unknown', // For compatibility
+                    model: platformCpuInfo.cpuModel || os.cpus()[0]?.model || 'Unknown',
                     loadAverage: os.loadavg(),
                     cpuUsage: platformCpuInfo.cpuUsage || 0,
-                    usage: platformCpuInfo.cpuUsage || 0 // For compatibility
+                    usage: platformCpuInfo.cpuUsage || 0
                 };
             } else {
                 const cpus = os.cpus();
@@ -161,38 +114,21 @@ class SystemInfoManager extends EventEmitter {
                     cpuModel: cpus[0]?.model || 'Unknown',
                     model: cpus[0]?.model || 'Unknown',
                     loadAverage: os.loadavg(),
-                    cpuUsage: 0, // Can't calculate without platform-specific tools
+                    cpuUsage: 0,
                     usage: 0
                 };
             }
-        } catch (error) {
-            console.error('Error getting CPU info:', error);
-            // Return safe fallback
-            const cpus = os.cpus();
-            return {
-                cpuCores: cpus,
-                cpuCount: cpus.length,
-                cores: cpus.length,
-                cpuModel: 'Unknown',
-                model: 'Unknown',
-                loadAverage: [0, 0, 0],
-                cpuUsage: 0,
-                usage: 0,
-                error: error.message
-            };
-        }
+        });
     }
 
-    // Get memory information - IMPROVED with caching
     async getMemoryInfo() {
-        try {
+        return this.getCachedOrFetch('memory', async () => {
             if (this.systemInfo && typeof this.systemInfo.getMemoryInfo === 'function') {
                 const platformMemInfo = await this.systemInfo.getMemoryInfo();
                 
-                // Ensure consistent format
                 const total = platformMemInfo.totalPhysical || platformMemInfo.total || os.totalmem();
                 const free = platformMemInfo.freePhysical || platformMemInfo.free || os.freemem();
-                const available = platformMemInfo.available || free; // Available memory (includes cache/buffers on Linux)
+                const available = platformMemInfo.available || free;
                 const used = total - free;
                 
                 return {
@@ -200,11 +136,11 @@ class SystemInfoManager extends EventEmitter {
                     total: total,
                     freePhysical: free,
                     free: free,
-                    available: available, // This is key for accurate resource calculation
+                    available: available,
                     usedPhysical: used,
                     used: used,
                     memoryUsagePercent: ((used / total) * 100).toFixed(2),
-                    usage: parseFloat(((used / total) * 100).toFixed(2)), // For compatibility
+                    usage: parseFloat(((used / total) * 100).toFixed(2)),
                     processMemory: process.memoryUsage(),
                     buffers: platformMemInfo.buffers || 0,
                     cached: platformMemInfo.cached || 0
@@ -219,7 +155,7 @@ class SystemInfoManager extends EventEmitter {
                     total: total,
                     freePhysical: free,
                     free: free,
-                    available: free, // Fallback: assume free = available
+                    available: free,
                     usedPhysical: used,
                     used: used,
                     memoryUsagePercent: ((used / total) * 100).toFixed(2),
@@ -229,82 +165,36 @@ class SystemInfoManager extends EventEmitter {
                     cached: 0
                 };
             }
-        } catch (error) {
-            console.error('Error getting memory info:', error);
-            
-            // Safe fallback
-            const total = os.totalmem();
-            const free = os.freemem();
-            const used = total - free;
-            
-            return {
-                totalPhysical: total,
-                total: total,
-                freePhysical: free,
-                free: free,
-                available: free,
-                usedPhysical: used,
-                used: used,
-                memoryUsagePercent: ((used / total) * 100).toFixed(2),
-                usage: parseFloat(((used / total) * 100).toFixed(2)),
-                processMemory: process.memoryUsage(),
-                error: error.message
-            };
-        }
+        });
     }
 
-    // Get cached memory info to prevent rapid API calls
-    async getCachedMemoryInfo() {
-        const now = Date.now();
+    // Lightweight memory info for frequent polling
+    async getQuickMemoryInfo() {
+        const total = os.totalmem();
+        const free = os.freemem();
+        const used = total - free;
         
-        // Return cached memory info if still valid
-        if (this.memoryCache && (now - this.memoryCacheTime) < this.CACHE_DURATION) {
-            return this.memoryCache;
-        }
-        
-        // Get fresh memory info
-        try {
-            const memoryInfo = await this.getMemoryInfo();
-            this.memoryCache = memoryInfo;
-            this.memoryCacheTime = now;
-            return memoryInfo;
-        } catch (error) {
-            console.error('Failed to get cached memory info:', error);
-            // Return default values
-            const total = os.totalmem();
-            const free = os.freemem();
-            return {
-                total: total,
-                free: free,
-                available: free,
-                usage: ((total - free) / total) * 100
-            };
-        }
+        return {
+            total,
+            free,
+            used,
+            usage: parseFloat(((used / total) * 100).toFixed(2)),
+            processMemory: process.memoryUsage()
+        };
     }
 
-    // Clear memory cache when needed
-    clearMemoryCache() {
-        this.memoryCache = null;
-        this.memoryCacheTime = 0;
-    }
-
-    // Get disk information
     async getDiskInfo() {
-        try {
+        return this.getCachedOrFetch('disk', async () => {
             if (this.systemInfo && typeof this.systemInfo.getDiskInfo === 'function') {
                 return await this.systemInfo.getDiskInfo();
             } else {
                 return { message: 'Disk info not available for this platform' };
             }
-        } catch (error) {
-            console.error('Error getting disk info:', error);
-            return { error: error.message };
-        }
+        });
     }
 
-    // Get network information
     async getNetworkInfo() {
-        try {
+        return this.getCachedOrFetch('network', async () => {
             if (this.systemInfo && typeof this.systemInfo.getNetworkInfo === 'function') {
                 return await this.systemInfo.getNetworkInfo();
             } else {
@@ -313,291 +203,390 @@ class SystemInfoManager extends EventEmitter {
                     message: 'Detailed network info not available for this platform'
                 };
             }
-        } catch (error) {
-            console.error('Error getting network info:', error);
-            return { error: error.message };
-        }
+        });
     }
 
-    // Get running processes - FIXED method name
     async getRunningProcesses() {
-        try {
+        return this.getCachedOrFetch('processes', async () => {
             if (this.systemInfo && typeof this.systemInfo.getRunningProcesses === 'function') {
                 return await this.systemInfo.getRunningProcesses();
             } else {
                 return { message: 'Process info not available for this platform' };
             }
-        } catch (error) {
-            console.error('Error getting processes:', error);
-            return { error: error.message };
-        }
+        });
     }
 
-    // Alias for compatibility with main.js
-    async getProcesses() {
-        return await this.getRunningProcesses();
-    }
-
-    // Get system logs
-    async getSystemLogs(logType = 'system', maxEvents = 50) {
-        try {
-            if (this.systemInfo && typeof this.systemInfo.getSystemLogs === 'function') {
-                return await this.systemInfo.getSystemLogs(logType, maxEvents);
-            } else {
-                return { message: 'System logs not available for this platform' };
-            }
-        } catch (error) {
-            console.error('Error getting system logs:', error);
-            return { error: error.message };
-        }
-    }
-
-    // Start real-time monitoring - FIXED VERSION
-    async startMonitoring(interval = 5000) {
-        try {
-            // Stop any existing monitoring
-            if (this.monitoringSession) {
-                this.stopMonitoring();
-            }
-
-            console.log(`Starting monitoring with interval: ${interval}ms`);
-
-            if (this.systemInfo && typeof this.systemInfo.startRealTimeMonitoring === 'function') {
-                // Create a callback function that emits events
-                const monitoringCallback = (data) => {
-                    try {
-                        // Emit the data using EventEmitter
-                        this.emit('data', data);
-                        // Also store for direct access
-                        this.lastMonitoringData = data;
-                    } catch (error) {
-                        console.error('Error in monitoring callback:', error);
-                    }
-                };
-
-                // Start platform-specific monitoring with correct parameter order
-                this.monitoringSession = await this.systemInfo.startRealTimeMonitoring(
-                    monitoringCallback,  // callback function first
-                    interval            // interval second
-                );
-            } else {
-                // Fallback monitoring using basic Node.js info
-                const monitor = async () => {
-                    try {
-                        const memInfo = await this.getCachedMemoryInfo();
-                        const cpuInfo = await this.getCPUInfo();
-                        
-                        const data = {
-                            timestamp: new Date().toISOString(),
-                            cpu: {
-                                usage: cpuInfo.cpuUsage || 0,
-                                cores: cpuInfo.cpuCount || os.cpus().length,
-                                loadAverage: os.loadavg()
-                            },
-                            memory: {
-                                total: memInfo.total,
-                                free: memInfo.free,
-                                available: memInfo.available,
-                                used: memInfo.used,
-                                usage: memInfo.usage,
-                                usagePercent: memInfo.memoryUsagePercent
-                            },
-                            uptime: os.uptime(),
-                            platform: this.getPlatformName()
-                        };
-                        
-                        this.emit('data', data);
-                        this.lastMonitoringData = data;
-                    } catch (error) {
-                        console.error('Error in fallback monitoring:', error);
-                    }
-                };
-
-                await monitor(); // Initial call
-                const intervalId = setInterval(monitor, interval);
-                
-                this.monitoringSession = {
-                    stop: () => clearInterval(intervalId)
-                };
-            }
-
-            console.log('Monitoring started successfully');
-            return this.monitoringSession;
-        } catch (error) {
-            console.error('Error starting monitoring:', error);
-            throw error;
-        }
-    }
-
-    // Stop monitoring
-    stopMonitoring() {
-        try {
-            if (this.monitoringSession && typeof this.monitoringSession.stop === 'function') {
-                this.monitoringSession.stop();
-                console.log('Monitoring session stopped');
-            }
-
-            if (this.systemInfo && typeof this.systemInfo.stopMonitoring === 'function') {
-                this.systemInfo.stopMonitoring();
-                console.log('Platform monitoring stopped');
-            }
-
-            this.monitoringSession = null;
-            this.emit('stopped');
-        } catch (error) {
-            console.error('Error stopping monitoring:', error);
-        }
-    }
-
-    // Get performance metrics for optimization - IMPROVED
     async getPerformanceMetrics() {
+        return this.getCachedOrFetch('performance', async () => {
+            try {
+                const [cpuInfo, memoryInfo, diskInfo] = await Promise.all([
+                    this.getCPUInfo(),
+                    this.getQuickMemoryInfo(), // Use quick version
+                    this.getCachedValue('disk') || { message: 'Using cached disk info' } // Don't fetch if not cached
+                ]);
+
+                return {
+                    timestamp: new Date().toISOString(),
+                    performance: {
+                        cpu: {
+                            usage: cpuInfo.cpuUsage || cpuInfo.usage || 0,
+                            cores: cpuInfo.cpuCores?.length || cpuInfo.cpuCount || cpuInfo.cores || os.cpus().length,
+                            loadAverage: cpuInfo.loadAverage || os.loadavg(),
+                            model: cpuInfo.cpuModel || cpuInfo.model || 'Unknown'
+                        },
+                        memory: {
+                            usage: memoryInfo.usage || 0,
+                            total: memoryInfo.total || os.totalmem(),
+                            free: memoryInfo.free || os.freemem(),
+                            available: memoryInfo.available || memoryInfo.free || os.freemem(),
+                            processUsage: memoryInfo.processMemory || process.memoryUsage()
+                        },
+                        disk: Array.isArray(diskInfo) ? diskInfo.map(disk => ({
+                            drive: disk.drive || disk.filesystem,
+                            usage: parseFloat(disk.usagePercent || 0),
+                            free: disk.freeSpace || disk.available,
+                            total: disk.totalSize || disk.total
+                        })) : [],
+                        uptime: os.uptime(),
+                        platform: this.getPlatformName()
+                    }
+                };
+            } catch (error) {
+                console.error('Error getting performance metrics:', error);
+                return this.getFallbackPerformanceMetrics();
+            }
+        });
+    }
+
+    getFallbackPerformanceMetrics() {
+        return {
+            timestamp: new Date().toISOString(),
+            performance: {
+                cpu: { usage: 0, cores: os.cpus().length, loadAverage: os.loadavg(), model: 'Unknown' },
+                memory: { usage: 0, total: os.totalmem(), free: os.freemem(), available: os.freemem(), processUsage: process.memoryUsage() },
+                disk: [],
+                uptime: os.uptime(),
+                platform: this.getPlatformName()
+            }
+        };
+    }
+
+    // ===============================
+    // OPTIMIZED FULL SYSTEM INFO
+    // ===============================
+
+    async getAllSystemInfo() {
+        const now = Date.now();
+        
+        // Check if we need a full system scan
+        if (now - this.lastFullSystemScan < this.fullSystemScanInterval) {
+            // Return cached/optimized version
+            return await this.getOptimizedSystemInfo();
+        }
+        
+        // Perform full system scan
+        this.lastFullSystemScan = now;
+        return await this.getFullSystemInfo();
+    }
+
+    async getOptimizedSystemInfo() {
         try {
-            const [cpuInfo, memoryInfo, diskInfo] = await Promise.all([
+            const platformInfo = this.getPlatformInfo();
+            
+            // Get critical info only
+            const [basicInfo, cpuInfo, memoryInfo] = await Promise.all([
+                this.getBasicInfo(),
                 this.getCPUInfo(),
-                this.getCachedMemoryInfo(), // Use cached version for better performance
-                this.getDiskInfo()
+                this.getQuickMemoryInfo()
             ]);
 
             return {
                 timestamp: new Date().toISOString(),
+                platform: platformInfo,
+                basic: basicInfo,
+                cpu: cpuInfo,
+                memory: memoryInfo,
                 performance: {
-                    cpu: {
-                        usage: cpuInfo.cpuUsage || cpuInfo.usage || 0,
-                        cores: cpuInfo.cpuCores?.length || cpuInfo.cpuCount || cpuInfo.cores || os.cpus().length,
-                        loadAverage: cpuInfo.loadAverage || os.loadavg(),
-                        model: cpuInfo.cpuModel || cpuInfo.model || 'Unknown'
-                    },
-                    memory: {
-                        usage: parseFloat(memoryInfo.memoryUsagePercent || memoryInfo.usage || 0),
-                        total: memoryInfo.totalPhysical || memoryInfo.total || os.totalmem(),
-                        free: memoryInfo.freePhysical || memoryInfo.free || os.freemem(),
-                        available: memoryInfo.available || memoryInfo.free || os.freemem(),
-                        processUsage: process.memoryUsage()
-                    },
-                    disk: Array.isArray(diskInfo) ? diskInfo.map(disk => ({
-                        drive: disk.drive,
-                        usage: parseFloat(disk.usagePercent || 0),
-                        free: disk.freeSpace,
-                        total: disk.totalSize
-                    })) : [],
-                    uptime: os.uptime(),
-                    platform: this.getPlatformName()
+                    cpuUsage: cpuInfo.cpuUsage || 0,
+                    memoryUsage: parseFloat(memoryInfo.usage || 0),
+                    uptime: os.uptime()
                 },
-                recommendations: await this.generateOptimizationRecommendations(cpuInfo, memoryInfo, diskInfo)
+                optimized: true,
+                message: 'Optimized system info (partial data)'
             };
         } catch (error) {
-            console.error('Error getting performance metrics:', error);
-            return { 
-                error: error.message,
-                timestamp: new Date().toISOString(),
-                performance: {
-                    cpu: { usage: 0, cores: os.cpus().length, loadAverage: [0, 0, 0] },
-                    memory: { usage: 0, total: os.totalmem(), free: os.freemem(), available: os.freemem() },
-                    disk: [],
-                    uptime: os.uptime(),
-                    platform: this.getPlatformName()
-                }
-            };
+            console.error('Error getting optimized system info:', error);
+            throw error;
         }
     }
 
-    // Generate optimization recommendations - IMPROVED
-    async generateOptimizationRecommendations(cpuInfo, memoryInfo, diskInfo) {
-        const recommendations = [];
-
+    async getFullSystemInfo() {
         try {
-            // CPU recommendations
-            const cpuUsage = cpuInfo.cpuUsage || cpuInfo.usage || 0;
-            if (cpuUsage > 80) {
-                recommendations.push({
-                    type: 'CPU',
-                    level: 'high',
-                    message: 'High CPU usage detected. Consider reducing attack intensity or concurrent processes.'
-                });
+            const platformInfo = this.getPlatformInfo();
+            
+            if (this.systemInfo && typeof this.systemInfo.getAllSystemInfo === 'function') {
+                const detailedInfo = await this.systemInfo.getAllSystemInfo();
+                return {
+                    ...detailedInfo,
+                    platform: platformInfo,
+                    fullScan: true
+                };
+            } else {
+                const basicInfo = await this.getBasicInfo();
+                return {
+                    timestamp: new Date().toISOString(),
+                    platform: platformInfo,
+                    basic: basicInfo,
+                    message: `Detailed system info not available for ${this.getPlatformName()}`,
+                    fullScan: false
+                };
             }
-
-            // Memory recommendations
-            const memUsage = parseFloat(memoryInfo.memoryUsagePercent || memoryInfo.usage || 0);
-            if (memUsage > 85) {
-                recommendations.push({
-                    type: 'Memory',
-                    level: 'high',
-                    message: 'High memory usage detected. Consider closing unnecessary applications or reducing attack parameters.'
-                });
-            } else if (memUsage > 70) {
-                recommendations.push({
-                    type: 'Memory',
-                    level: 'medium',
-                    message: 'Moderate memory usage. Monitor for potential performance issues.'
-                });
-            }
-
-            // Disk recommendations
-            if (Array.isArray(diskInfo)) {
-                diskInfo.forEach(disk => {
-                    const usage = parseFloat(disk.usagePercent || 0);
-                    if (usage > 90) {
-                        recommendations.push({
-                            type: 'Disk',
-                            level: 'high',
-                            message: `Disk ${disk.drive} is almost full (${usage}%). Consider freeing up space.`
-                        });
-                    }
-                });
-            }
-
-            // Thread optimization recommendations
-            const cores = cpuInfo.cpuCores?.length || cpuInfo.cpuCount || cpuInfo.cores || os.cpus().length;
-            recommendations.push({
-                type: 'Optimization',
-                level: 'info',
-                message: `For optimal performance with ${cores} CPU cores, use 8-16 threads per core (${cores * 8}-${cores * 16} total threads).`
-            });
-
-            // General recommendations
-            if (recommendations.filter(r => r.level === 'high').length === 0) {
-                recommendations.push({
-                    type: 'System',
-                    level: 'good',
-                    message: 'System performance is optimal for stress testing operations.'
-                });
-            }
-
-            return recommendations;
         } catch (error) {
-            console.error('Error generating recommendations:', error);
-            return [{
-                type: 'Error',
-                level: 'warning',
-                message: 'Unable to generate performance recommendations: ' + error.message
-            }];
+            console.error('Error getting full system info:', error);
+            throw error;
         }
     }
 
-    // =================== RESOURCE VALIDATION METHODS ===================
+    // ===============================
+    // OPTIMIZED MONITORING
+    // ===============================
 
-    // Calculate safe thread limits based on available resources - IMPROVED
+    async startMonitoring(interval = 10000, options = {}) {
+        if (this.isMonitoring) {
+            await this.stopMonitoring();
+        }
+
+        const {
+            includeProcesses = false,
+            includeDisk = false,
+            includeNetwork = false,
+            lightweight = true
+        } = options;
+
+        this.isMonitoring = true;
+        this.monitoringOptions = { interval, includeProcesses, includeDisk, includeNetwork, lightweight };
+
+        console.log(`🔍 Starting optimized monitoring (interval: ${interval}ms, lightweight: ${lightweight})`);
+
+        const monitoringCallback = this.resourceManager.createThrottledFunction(async () => {
+            if (!this.isMonitoring) return;
+
+            try {
+                let data;
+                
+                if (lightweight) {
+                    // Lightweight monitoring - essential metrics only
+                    const [cpuInfo, memoryInfo] = await Promise.all([
+                        this.getCPUInfo(),
+                        this.getQuickMemoryInfo()
+                    ]);
+                    
+                    data = {
+                        timestamp: new Date().toISOString(),
+                        cpu: {
+                            usage: cpuInfo.cpuUsage || 0,
+                            cores: cpuInfo.cores || os.cpus().length,
+                            loadAverage: os.loadavg()
+                        },
+                        memory: {
+                            total: memoryInfo.total,
+                            free: memoryInfo.free,
+                            used: memoryInfo.used,
+                            usage: memoryInfo.usage,
+                            processMemory: memoryInfo.processMemory
+                        },
+                        uptime: os.uptime(),
+                        platform: this.getPlatformName(),
+                        lightweight: true
+                    };
+                } else {
+                    // Full monitoring
+                    const promises = [this.getCPUInfo(), this.getMemoryInfo()];
+                    
+                    if (includeDisk) promises.push(this.getDiskInfo());
+                    if (includeNetwork) promises.push(this.getNetworkInfo());
+                    if (includeProcesses) promises.push(this.getRunningProcesses());
+                    
+                    const results = await Promise.all(promises);
+                    
+                    data = {
+                        timestamp: new Date().toISOString(),
+                        cpu: results[0],
+                        memory: results[1],
+                        uptime: os.uptime(),
+                        platform: this.getPlatformName(),
+                        lightweight: false
+                    };
+                    
+                    let resultIndex = 2;
+                    if (includeDisk) data.disk = results[resultIndex++];
+                    if (includeNetwork) data.network = results[resultIndex++];
+                    if (includeProcesses) data.processes = results[resultIndex++];
+                }
+                
+                this.emit('data', data);
+                this.trackCall('monitoring');
+                
+            } catch (error) {
+                console.error('Error in optimized monitoring:', error);
+                this.emit('error', error);
+            }
+        }, Math.max(1000, interval / 2), 'system_monitoring'); // Throttle to prevent spam
+
+        // Use resource manager for interval
+        this.monitoringIntervalId = this.resourceManager.createInterval(
+            monitoringCallback,
+            interval,
+            'system_monitoring'
+        );
+
+        // Initial call
+        monitoringCallback();
+
+        return {
+            stop: () => this.stopMonitoring()
+        };
+    }
+
+    async stopMonitoring() {
+        if (!this.isMonitoring) return;
+
+        this.isMonitoring = false;
+        
+        if (this.monitoringIntervalId) {
+            this.resourceManager.clearManagedInterval(this.monitoringIntervalId);
+            this.monitoringIntervalId = null;
+        }
+
+        this.emit('stopped');
+        console.log('🛑 Optimized monitoring stopped');
+    }
+
+    // ===============================
+    // CACHING UTILITIES
+    // ===============================
+
+    async getCachedOrFetch(type, fetchFunction) {
+        const config = this.cacheConfig[type];
+        if (!config) {
+            console.warn(`No cache config for type: ${type}`);
+            return await fetchFunction();
+        }
+
+        // Check cache first
+        const cached = this.resourceManager.getCache(config.key);
+        if (cached) {
+            this.trackCall(`${type}_cache_hit`);
+            return cached;
+        }
+
+        // Cache miss - fetch and cache
+        this.trackCall(`${type}_cache_miss`);
+        const startTime = Date.now();
+        
+        try {
+            const result = await fetchFunction();
+            const executionTime = Date.now() - startTime;
+            
+            this.resourceManager.setCache(config.key, result, config.ttl);
+            this.trackExecutionTime(type, executionTime);
+            
+            return result;
+        } catch (error) {
+            this.trackCall(`${type}_error`);
+            throw error;
+        }
+    }
+
+    getCachedValue(type) {
+        const config = this.cacheConfig[type];
+        return config ? this.resourceManager.getCache(config.key) : null;
+    }
+
+    clearCache(type) {
+        const config = this.cacheConfig[type];
+        if (config) {
+            this.resourceManager.caches.delete(config.key);
+        }
+    }
+
+    clearAllCaches() {
+        Object.values(this.cacheConfig).forEach(config => {
+            this.resourceManager.caches.delete(config.key);
+        });
+        console.log('🧹 Cleared all system info caches');
+    }
+
+    // ===============================
+    // PERFORMANCE TRACKING
+    // ===============================
+
+    trackCall(operation) {
+        const count = this.callCounts.get(operation) || 0;
+        this.callCounts.set(operation, count + 1);
+    }
+
+    trackExecutionTime(operation, time) {
+        const times = this.executionTimes.get(operation) || [];
+        times.push(time);
+        
+        // Keep only last 100 measurements
+        if (times.length > 100) {
+            times.splice(0, times.length - 50);
+        }
+        
+        this.executionTimes.set(operation, times);
+    }
+
+    getPerformanceStats() {
+        const stats = {
+            callCounts: Object.fromEntries(this.callCounts),
+            averageExecutionTimes: {},
+            cacheStats: {
+                size: this.resourceManager.caches.size,
+                hitRate: 0
+            },
+            memoryUsage: process.memoryUsage()
+        };
+
+        // Calculate average execution times
+        for (const [operation, times] of this.executionTimes.entries()) {
+            if (times.length > 0) {
+                stats.averageExecutionTimes[operation] = 
+                    times.reduce((a, b) => a + b, 0) / times.length;
+            }
+        }
+
+        // Calculate cache hit rate
+        const hits = this.callCounts.get('cache_hit') || 0;
+        const misses = this.callCounts.get('cache_miss') || 0;
+        const total = hits + misses;
+        stats.cacheStats.hitRate = total > 0 ? hits / total : 0;
+
+        return stats;
+    }
+
+    // ===============================
+    // RESOURCE MANAGEMENT
+    // ===============================
+
     async calculateOptimalThreadLimits() {
         try {
-            const memoryInfo = await this.getCachedMemoryInfo();
+            const memoryInfo = await this.getQuickMemoryInfo(); // Use quick version
             const cpuInfo = await this.getCPUInfo();
             
-            // Use available memory (includes cache/buffers) for more accurate calculation
             const availableMemory = memoryInfo.available || memoryInfo.free || os.freemem();
             const totalMemory = memoryInfo.total || os.totalmem();
             const cpuCores = cpuInfo.cores || cpuInfo.cpuCount || os.cpus().length;
             
-            // Memory calculations
-            const memoryPerThread = 2 * 1024 * 1024; // 2MB per thread (conservative)
-            const baseSystemMemory = 500 * 1024 * 1024; // Reserve 500MB for system
+            const memoryPerThread = 2 * 1024 * 1024;
+            const baseSystemMemory = 200 * 1024 * 1024; // Reduced from 500MB
             const usableMemory = Math.max(0, availableMemory - baseSystemMemory);
             
-            // Calculate thread limits
             const maxThreadsByMemory = Math.floor(usableMemory / memoryPerThread);
-            const maxThreadsByCPU = cpuCores * 20; // Allow up to 20 threads per core
-            const recommendedThreadsByCPU = cpuCores * 8; // Optimal: 8 threads per core
+            const maxThreadsByCPU = cpuCores * 16; // Reduced from 20
+            const recommendedThreadsByCPU = cpuCores * 6; // Reduced from 8
             
-            // Use the most restrictive limit for safety
             const maxSafeThreads = Math.max(1, Math.min(maxThreadsByMemory, maxThreadsByCPU));
             const recommendedThreads = Math.max(1, Math.min(recommendedThreadsByCPU, maxSafeThreads));
             
@@ -622,262 +611,86 @@ class SystemInfoManager extends EventEmitter {
             };
         } catch (error) {
             console.error('Error calculating thread limits:', error);
-            // Fallback to conservative limits
             const cpuCores = os.cpus().length;
             return {
-                maxSafeThreads: cpuCores * 4,
-                recommendedThreads: cpuCores * 2,
-                memoryBased: {
-                    availableMemory: os.freemem(),
-                    usableMemory: os.freemem() * 0.7,
-                    memoryPerThread: 2 * 1024 * 1024,
-                    maxThreads: Math.floor((os.freemem() * 0.7) / (2 * 1024 * 1024))
-                },
-                cpuBased: {
-                    cores: cpuCores,
-                    maxThreads: cpuCores * 16,
-                    recommendedThreads: cpuCores * 8
-                },
-                currentMemoryUsage: 'Unknown',
-                platform: this.getPlatformName(),
-                calculatedAt: new Date().toISOString(),
-                limitingFactor: 'fallback'
+                maxSafeThreads: cpuCores * 2, // More conservative fallback
+                recommendedThreads: cpuCores,
+                error: error.message
             };
         }
     }
 
-    // Validate if attack parameters are feasible - MAIN VALIDATION METHOD
-    async validateAttackResources(threadCount, targetCount = 1) {
-        try {
-            const limits = await this.calculateOptimalThreadLimits();
-            const totalThreads = threadCount * targetCount;
-            const requiredMemory = totalThreads * limits.memoryBased.memoryPerThread;
-            
-            // Validation logic
-            const isValid = totalThreads <= limits.maxSafeThreads;
-            const isRecommended = totalThreads <= limits.recommendedThreads;
-            
-            // Generate specific recommendations
-            const recommendations = [];
-            
-            if (!isValid) {
-                if (limits.limitingFactor === 'memory') {
-                    recommendations.push({
-                        type: 'memory',
-                        level: 'critical',
-                        message: `Insufficient resources: memory. Requested ${totalThreads} threads requires ${this.formatBytes(requiredMemory)} but only ${this.formatBytes(limits.memoryBased.usableMemory)} available.`
-                    });
-                } else {
-                    recommendations.push({
-                        type: 'cpu',
-                        level: 'critical',  
-                        message: `Insufficient resources: CPU cores. ${totalThreads} threads exceeds safe limit for ${limits.cpuBased.cores} cores.`
-                    });
-                }
-                
-                recommendations.push({
-                    type: 'suggestion',
-                    level: 'info',
-                    message: `Reduce threads to ${limits.recommendedThreads} or fewer for stable operation.`
-                });
-            } else if (!isRecommended) {
-                recommendations.push({
-                    type: 'performance',
-                    level: 'warning',
-                    message: `${totalThreads} threads may impact performance. Recommended: ${limits.recommendedThreads} threads for optimal results.`
-                });
-            }
-            
-            return {
-                isValid,
-                isRecommended,
-                totalThreadsRequested: totalThreads,
-                maxSafeThreads: limits.maxSafeThreads,
-                recommendedThreads: limits.recommendedThreads,
-                requiredMemory,
-                availableMemory: limits.memoryBased.availableMemory,
-                memoryUsagePercent: (requiredMemory / limits.memoryBased.availableMemory * 100).toFixed(1),
-                systemInfo: {
-                    cpuCores: limits.cpuBased.cores,
-                    currentMemoryUsage: limits.currentMemoryUsage,
-                    platform: limits.platform,
-                    limitingFactor: limits.limitingFactor
-                },
-                recommendations,
-                limits,
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            console.error('Error validating attack resources:', error);
-            return {
-                isValid: false,
-                isRecommended: false,
-                error: error.message,
-                recommendations: [{ 
-                    type: 'error', 
-                    level: 'critical',
-                    message: 'Unable to validate system resources: ' + error.message 
-                }],
-                timestamp: new Date().toISOString()
-            };
-        }
+    // ===============================
+    // UTILITY METHODS
+    // ===============================
+
+    getPlatformInfo() {
+        return {
+            platform: this.platform,
+            platformName: this.getPlatformName(),
+            arch: os.arch(),
+            release: os.release(),
+            hostname: os.hostname(),
+            nodeVersion: process.version
+        };
     }
 
-    // Get dynamic thread limits for UI components
-    async getDynamicThreadLimits() {
-        try {
-            const limits = await this.calculateOptimalThreadLimits();
-            
-            return {
-                // For single attacks
-                single: {
-                    min: 1,
-                    max: limits.maxSafeThreads,
-                    recommended: Math.min(limits.recommendedThreads, 100), // Cap at 100 for UI
-                    default: Math.min(Math.floor(limits.recommendedThreads / 2), 50)
-                },
-                // For multi-target attacks (per target)
-                multi: {
-                    min: 1,
-                    max: Math.floor(limits.maxSafeThreads / 4), // Assume average 4 targets
-                    recommended: Math.min(Math.floor(limits.recommendedThreads / 4), 50),
-                    default: Math.min(Math.floor(limits.recommendedThreads / 8), 20)
-                },
-                systemInfo: {
-                    cpuCores: limits.cpuBased.cores,
-                    availableMemoryGB: (limits.memoryBased.availableMemory / (1024 * 1024 * 1024)).toFixed(1),
-                    platform: limits.platform,
-                    limitingFactor: limits.limitingFactor
-                },
-                calculated: limits.calculatedAt
-            };
-        } catch (error) {
-            console.error('Error getting dynamic thread limits:', error);
-            // Return safe fallback values
-            const cpuCores = os.cpus().length;
-            return {
-                single: { min: 1, max: cpuCores * 4, recommended: cpuCores * 2, default: cpuCores },
-                multi: { min: 1, max: cpuCores, recommended: Math.max(1, cpuCores / 2), default: Math.max(1, cpuCores / 4) },
-                systemInfo: { 
-                    cpuCores: cpuCores, 
-                    availableMemoryGB: (os.freemem() / (1024 * 1024 * 1024)).toFixed(1),
-                    platform: this.getPlatformName(),
-                    limitingFactor: 'fallback'
-                },
-                calculated: new Date().toISOString()
-            };
-        }
+    getPlatformName() {
+        const platformNames = {
+            'win32': 'Windows',
+            'linux': 'Linux',
+            'darwin': 'macOS',
+            'freebsd': 'FreeBSD'
+        };
+        return platformNames[this.platform] || 'Unknown';
     }
 
-    // Format bytes for human readability
-    formatBytes(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    getFallbackBasicInfo() {
+        return {
+            hostname: os.hostname(),
+            platform: os.platform(),
+            architecture: os.arch(),
+            release: os.release(),
+            uptime: os.uptime(),
+            totalMemory: os.totalmem(),
+            freeMemory: os.freemem(),
+            cpuCount: os.cpus().length,
+            cpuModel: os.cpus()[0]?.model || 'Unknown',
+            loadAverage: os.loadavg(),
+            nodeVersion: process.version
+        };
     }
 
-    // =================== EXPORT AND UTILITY METHODS ===================
+    // ===============================
+    // CLEANUP
+    // ===============================
 
-    // Export system information
-    async exportSystemInfo(format = 'json') {
-        try {
-            const systemInfo = await this.getAllSystemInfo();
-            
-            switch (format.toLowerCase()) {
-                case 'json':
-                    return JSON.stringify(systemInfo, null, 2);
-                
-                case 'txt':
-                    return this.formatSystemInfoAsText(systemInfo);
-                
-                default:
-                    throw new Error(`Unsupported export format: ${format}`);
-            }
-        } catch (error) {
-            console.error('Error exporting system info:', error);
-            throw error;
-        }
-    }
-
-    // Format system info as readable text
-    formatSystemInfoAsText(systemInfo) {
-        let text = 'SYSTEM INFORMATION REPORT\n';
-        text += '='.repeat(50) + '\n\n';
-        
-        text += `Generated: ${systemInfo.timestamp}\n`;
-        text += `Platform: ${systemInfo.platform?.platformName || 'Unknown'}\n\n`;
-
-        // Basic Info
-        if (systemInfo.basic) {
-            text += 'BASIC INFORMATION\n';
-            text += '-'.repeat(20) + '\n';
-            text += `Hostname: ${systemInfo.basic.hostname}\n`;
-            text += `Architecture: ${systemInfo.basic.architecture}\n`;
-            text += `Uptime: ${Math.floor(systemInfo.basic.uptime / 3600)} hours\n\n`;
-        }
-
-        return text;
-    }
-
-    // Clean up resources and caches
     cleanup() {
         try {
-            // Stop monitoring if running
+            console.log('🧹 Starting optimized system info cleanup...');
+            
+            // Stop monitoring
             this.stopMonitoring();
             
-            // Clear caches
-            this.clearMemoryCache();
-            this.lastMonitoringData = null;
+            // Clear all caches
+            this.clearAllCaches();
+            
+            // Clear performance tracking
+            this.callCounts.clear();
+            this.executionTimes.clear();
             
             // Remove all listeners
             this.removeAllListeners();
             
-            console.log('SystemInfoManager cleanup completed');
+            console.log('✅ Optimized system info cleanup completed');
         } catch (error) {
-            console.error('Error during SystemInfoManager cleanup:', error);
+            console.error('❌ Error during optimized system info cleanup:', error);
         }
-    }
-
-    // Check if system is ready for attacks
-    async isSystemReady() {
-        try {
-            const limits = await this.calculateOptimalThreadLimits();
-            const memoryInfo = await this.getCachedMemoryInfo();
-            
-            return {
-                ready: limits.maxSafeThreads > 0 && memoryInfo.usage < 90,
-                maxThreads: limits.maxSafeThreads,
-                recommendedThreads: limits.recommendedThreads,
-                memoryUsage: memoryInfo.usage,
-                warnings: []
-            };
-        } catch (error) {
-            return {
-                ready: false,
-                error: error.message,
-                warnings: ['System health check failed']
-            };
-        }
-    }
-
-    // Get real-time system status
-    getCurrentSystemStatus() {
-        return {
-            lastUpdate: this.lastMonitoringData?.timestamp || 'Never',
-            monitoring: !!this.monitoringSession,
-            cacheStatus: {
-                memoryCache: !!this.memoryCache,
-                memoryCacheAge: this.memoryCache ? Date.now() - this.memoryCacheTime : 0
-            },
-            platform: this.getPlatformName()
-        };
     }
 }
 
-// Basic fallback system info class for unsupported platforms
-class BasicSystemInfo {
+// Optimized basic system info for fallback
+class OptimizedBasicSystemInfo {
     async getBasicSystemInfo() {
         return {
             hostname: os.hostname(),
@@ -917,7 +730,7 @@ class BasicSystemInfo {
                 release: os.release(),
                 hostname: os.hostname()
             },
-            message: 'Basic system information only (platform-specific details unavailable)'
+            message: 'Optimized basic system information only'
         };
     }
 
@@ -928,7 +741,7 @@ class BasicSystemInfo {
             cpuCount: cpus.length,
             cpuModel: cpus[0]?.model || 'Unknown',
             loadAverage: os.loadavg(),
-            cpuUsage: 0 // Cannot determine without platform-specific tools
+            cpuUsage: 0
         };
     }
 
@@ -941,54 +754,23 @@ class BasicSystemInfo {
             totalPhysical: total,
             freePhysical: free,
             usedPhysical: used,
-            available: free, // Assume free = available for basic implementation
+            available: free,
             memoryUsagePercent: ((used / total) * 100).toFixed(2),
             processMemory: process.memoryUsage()
-        };
-    }
-
-    async getNetworkInfo() {
-        return {
-            networkInterfaces: os.networkInterfaces(),
-            message: 'Basic network interface information only'
-        };
-    }
-
-    async getRunningProcesses() {
-        return {
-            message: 'Process enumeration not available in basic mode',
-            currentProcess: {
-                pid: process.pid,
-                memory: process.memoryUsage(),
-                uptime: process.uptime()
-            }
-        };
-    }
-
-    async getDiskInfo() {
-        return {
-            message: 'Disk information not available in basic mode'
-        };
-    }
-
-    async getSystemLogs() {
-        return {
-            message: 'System logs not available in basic mode'
         };
     }
 
     async startRealTimeMonitoring(callback, interval = 5000) {
         const monitor = async () => {
             try {
-                const cpuInfo = await this.getCPUInfo();
                 const memInfo = await this.getMemoryInfo();
                 
                 const data = {
                     timestamp: new Date().toISOString(),
                     cpu: {
-                        usage: 0, // Cannot determine without platform tools
-                        cores: cpuInfo.cpuCount,
-                        loadAverage: cpuInfo.loadAverage
+                        usage: 0,
+                        cores: os.cpus().length,
+                        loadAverage: os.loadavg()
                     },
                     memory: {
                         total: memInfo.totalPhysical,
@@ -997,35 +779,27 @@ class BasicSystemInfo {
                         usage: parseFloat(memInfo.memoryUsagePercent)
                     },
                     uptime: os.uptime(),
-                    platform: 'Basic'
+                    platform: 'Optimized Basic'
                 };
                 
                 if (callback && typeof callback === 'function') {
                     callback(data);
                 }
             } catch (error) {
-                console.error('Error in basic monitoring:', error);
+                console.error('Error in optimized basic monitoring:', error);
             }
         };
 
-        // Initial call
         await monitor();
-        
-        // Set up interval
         const intervalId = setInterval(monitor, interval);
         
         return {
             stop: () => {
                 clearInterval(intervalId);
-                console.log('Basic monitoring stopped');
+                console.log('Optimized basic monitoring stopped');
             }
         };
     }
-
-    stopMonitoring() {
-        // Nothing to stop in basic implementation
-        console.log('Basic monitoring stop called');
-    }
 }
 
-module.exports = SystemInfoManager;
+module.exports = OptimizedSystemInfoManager;

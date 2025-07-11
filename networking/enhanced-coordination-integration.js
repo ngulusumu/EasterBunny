@@ -1,9 +1,9 @@
-//networking/coordination-integration.js
+//networking/enhanced-coordination-integration.js
 const { app, BrowserWindow, ipcMain, Menu, Tray } = require('electron');
 const path = require('path');
-const { PrivateNetworkCoordinator } = require('./private-network-coordinator');
+const { EnhancedPrivateNetworkCoordinator } = require('./enhanced-private-network-coordinator');
 
-class MachineCoordinationApp {
+class EnhancedMachineCoordinationApp {
     constructor() {
         this.mainWindow = null;
         this.coordinator = null;
@@ -105,7 +105,7 @@ class MachineCoordinationApp {
         this.tray = new Tray(trayIconPath);
         
         this.updateTrayMenu();
-        this.tray.setToolTip('MKenya Tool - Machine Coordination Network');
+        this.tray.setToolTip('MKenya Tool - Enhanced Machine Coordination Network');
 
         this.tray.on('click', () => {
             this.showWindow();
@@ -138,22 +138,26 @@ class MachineCoordinationApp {
 
     async initializeCoordinator() {
         try {
-            console.log('Initializing private network coordinator...');
+            console.log('🚀 Initializing Enhanced Private Network Coordinator...');
             
-            this.coordinator = new PrivateNetworkCoordinator({
-                appIdentifier: 'mkenyatool-coordination-network',
+            this.coordinator = new EnhancedPrivateNetworkCoordinator({
+                appIdentifier: 'mkenyatool-enhanced-coordination-network',
                 appVersion: app.getVersion() || '1.0.0',
-                networkSecret: 'mkenyatool-private-secure-network-2025-coordination-key-v1-do-not-share',
-                minRequiredVersion: '1.0.0'
+                networkSecret: 'mkenyatool-enhanced-private-secure-network-2025-coordination-key-v2-do-not-share',
+                minRequiredVersion: '1.0.0',
+                machineId: 'default'
             });
             
+            // Set up event handlers
             this.coordinator.onPeerVerified = (peerId, verificationData) => {
-                console.log(`✅ Verified peer: ${peerId.substring(0, 8)}... (${verificationData.appVersion})`);
+                console.log(`✅ Enhanced Verified peer: ${peerId.substring(0, 8)}... (${verificationData.appVersion})`);
                 this.updateNetworkStats();
                 this.sendToRenderer('coordinator:peer-verified', {
                     peerId: peerId.substring(0, 8),
                     appVersion: verificationData.appVersion,
                     capabilities: verificationData.capabilities,
+                    performance: verificationData.performance,
+                    systemSummary: verificationData.systemSummary,
                     timestamp: Date.now()
                 });
             };
@@ -172,13 +176,16 @@ class MachineCoordinationApp {
                 this.sendToRenderer('coordinator:peer-status-update', {
                     peerId: peerId.substring(0, 8),
                     status: statusData.status,
+                    capabilities: statusData.capabilities,
                     performance: statusData.performance,
+                    healthScore: statusData.healthScore,
+                    capabilityScore: statusData.capabilityScore,
                     timestamp: Date.now()
                 });
             };
 
             this.coordinator.onPeerDisconnected = (peerId) => {
-                console.log(`🔌 Peer disconnected: ${peerId.substring(0, 8)}...`);
+                console.log(`🔌 Enhanced peer disconnected: ${peerId.substring(0, 8)}...`);
                 this.updateNetworkStats();
                 this.sendToRenderer('coordinator:peer-disconnected', {
                     peerId: peerId.substring(0, 8),
@@ -187,50 +194,63 @@ class MachineCoordinationApp {
             };
 
             this.coordinator.onNetworkIsolated = () => {
-                console.warn('🏝️ Network isolation detected - operating in standalone mode');
+                console.warn('🏝️ Enhanced network isolation detected - operating in standalone mode');
                 this.coordinatorStatus = 'isolated';
                 this.networkStats.isolatedMode = true;
                 this.updateNetworkStats();
                 this.sendToRenderer('coordinator:network-isolated', {
-                    message: 'No other MKenya Tool instances found on the network',
+                    message: 'No other Enhanced MKenya Tool instances found on the network',
                     timestamp: Date.now()
                 });
             };
 
             this.coordinator.onNetworkReconnected = () => {
-                console.log('🌐 Network reconnected - found verified peers');
+                console.log('🌐 Enhanced network reconnected - found verified peers');
                 this.coordinatorStatus = 'connected';
                 this.networkStats.isolatedMode = false;
                 this.updateNetworkStats();
                 this.sendToRenderer('coordinator:network-reconnected', {
-                    message: 'Connected to MKenya Tool network',
+                    message: 'Connected to Enhanced MKenya Tool network',
                     timestamp: Date.now()
+                });
+            };
+
+            this.coordinator.onGroupChatMessage = (message) => {
+                console.log(`💬 Group message from ${message.authorName}: ${message.content}`);
+                this.sendToRenderer('coordinator:group-message', {
+                    id: message.id,
+                    author: message.author.substring(0, 8),
+                    authorName: message.authorName,
+                    content: message.content,
+                    timestamp: message.timestamp
                 });
             };
 
             await this.coordinator.initialize();
             
             this.coordinatorStatus = 'connected';
-            console.log('✅ Private network coordinator initialized successfully');
+            console.log('✅ Enhanced Private Network Coordinator initialized successfully');
             console.log(`📡 Network ID: ${this.coordinator.getNetworkId()}`);
-            console.log(`🔑 Public Key: ${this.coordinator.keyManager.publicKey.substring(0, 16)}...`);
+            console.log(`🔑 Public Key: ${this.coordinator.publicKey.substring(0, 16)}...`);
             
             this.sendToRenderer('coordinator:initialized', {
                 networkId: this.coordinator.getNetworkId(),
-                publicKey: this.coordinator.keyManager.publicKey,
+                publicKey: this.coordinator.publicKey,
                 appIdentifier: this.coordinator.appIdentifier,
                 appVersion: this.coordinator.appVersion,
                 status: 'connected',
+                enhanced: true,
                 timestamp: Date.now()
             });
 
             this.updateNetworkStats();
             
         } catch (error) {
-            console.error('❌ Failed to initialize coordinator:', error);
+            console.error('❌ Failed to initialize enhanced coordinator:', error);
             this.coordinatorStatus = 'error';
             this.sendToRenderer('coordinator:error', {
                 error: error.message,
+                enhanced: true,
                 timestamp: Date.now()
             });
         }
@@ -242,8 +262,9 @@ class MachineCoordinationApp {
         try {
             const networkStatus = this.coordinator.getPrivateNetworkStatus();
             this.networkStats = {
-                totalMachines: networkStatus.verifiedPeers,
+                totalMachines: networkStatus.verifiedPeers + networkStatus.connectedMachines,
                 verifiedPeers: networkStatus.verifiedPeers,
+                connectedMachines: networkStatus.connectedMachines,
                 connectedRelays: networkStatus.connectedRelays,
                 isolatedMode: networkStatus.isolatedMode,
                 lastPeerContact: networkStatus.lastPeerContact,
@@ -260,14 +281,14 @@ class MachineCoordinationApp {
         if (!this.tray) return;
 
         const statusText = this.coordinatorStatus === 'connected' 
-            ? `Machines: ${this.networkStats.verifiedPeers} | Relays: ${this.networkStats.connectedRelays}`
+            ? `Machines: ${this.networkStats.verifiedPeers} | Connected: ${this.networkStats.connectedMachines}`
             : `Status: ${this.coordinatorStatus}`;
 
         const isolationStatus = this.networkStats.isolatedMode ? '🏝️ Isolated' : '🌐 Connected';
 
         const contextMenu = Menu.buildFromTemplate([
             {
-                label: 'MKenya Tool Network',
+                label: 'MKenya Tool Enhanced Network',
                 enabled: false,
                 icon: path.join(__dirname, '../icons/menu-icon.png')
             },
@@ -277,7 +298,7 @@ class MachineCoordinationApp {
                 click: () => this.showWindow()
             },
             {
-                label: 'Network Status',
+                label: 'Enhanced Network Status',
                 submenu: [
                     {
                         label: statusText,
@@ -298,9 +319,23 @@ class MachineCoordinationApp {
                             if (this.coordinator) {
                                 try {
                                     await this.coordinator.broadcastAppVerification();
-                                    console.log('Network refresh initiated');
+                                    await this.coordinator.pingKnownPeers();
+                                    console.log('Enhanced network refresh initiated');
                                 } catch (error) {
-                                    console.error('Failed to refresh network:', error);
+                                    console.error('Failed to refresh enhanced network:', error);
+                                }
+                            }
+                        }
+                    },
+                    {
+                        label: 'Send Test Message',
+                        click: async () => {
+                            if (this.coordinator) {
+                                try {
+                                    await this.coordinator.sendPrivateMessage('Test message from tray menu');
+                                    console.log('Test message sent');
+                                } catch (error) {
+                                    console.error('Failed to send test message:', error);
                                 }
                             }
                         }
@@ -329,8 +364,17 @@ class MachineCoordinationApp {
                         label: 'Reset Network Keys',
                         click: async () => {
                             if (this.coordinator) {
-                                await this.coordinator.keyManager.generateNewKeys();
-                                console.log('Network keys reset - restart required');
+                                await this.coordinator.loadOrGenerateKeys();
+                                console.log('Enhanced network keys reset - restart recommended');
+                            }
+                        }
+                    },
+                    {
+                        label: 'Force Network Refresh',
+                        click: async () => {
+                            if (this.coordinator) {
+                                await this.coordinator.broadcastAppVerification();
+                                await this.coordinator.sendAnnouncement();
                             }
                         }
                     }
@@ -353,7 +397,7 @@ class MachineCoordinationApp {
         ipcMain.handle('coordinator:get-network-status', async () => {
             if (!this.coordinator) {
                 return { 
-                    error: 'Coordinator not initialized',
+                    error: 'Enhanced coordinator not initialized',
                     status: this.coordinatorStatus 
                 };
             }
@@ -362,15 +406,15 @@ class MachineCoordinationApp {
 
         ipcMain.handle('coordinator:send-group-message', async (event, content) => {
             if (!this.coordinator) {
-                throw new Error('Coordinator not initialized');
+                throw new Error('Enhanced coordinator not initialized');
             }
             
             try {
                 const result = await this.coordinator.sendPrivateMessage(content);
-                console.log(`📨 Group message sent: "${content.substring(0, 50)}..."`);
+                console.log(`📨 Enhanced group message sent: "${content.substring(0, 50)}..."`);
                 return { success: true, relaysReached: result };
             } catch (error) {
-                console.error('Failed to send group message:', error);
+                console.error('Failed to send enhanced group message:', error);
                 throw new Error(`Failed to send message: ${error.message}`);
             }
         });
@@ -384,38 +428,38 @@ class MachineCoordinationApp {
                 const networkStatus = this.coordinator.getPrivateNetworkStatus();
                 return networkStatus.peerList || [];
             } catch (error) {
-                console.error('Failed to get machine list:', error);
+                console.error('Failed to get enhanced machine list:', error);
                 return [];
             }
         });
 
         ipcMain.handle('coordinator:report-machine-offline', async (event, machineId) => {
             if (!this.coordinator) {
-                throw new Error('Coordinator not initialized');
+                throw new Error('Enhanced coordinator not initialized');
             }
             
             try {
                 await this.coordinator.reportMachineOffline(machineId);
-                console.log(`📤 Reported machine offline: ${machineId.substring(0, 8)}...`);
+                console.log(`📤 Reported enhanced machine offline: ${machineId.substring(0, 8)}...`);
                 return { success: true };
             } catch (error) {
-                console.error('Failed to report machine offline:', error);
+                console.error('Failed to report enhanced machine offline:', error);
                 throw new Error(`Failed to report machine offline: ${error.message}`);
             }
         });
 
         ipcMain.handle('coordinator:get-my-info', async () => {
             if (!this.coordinator) {
-                return { error: 'Coordinator not initialized' };
+                return { error: 'Enhanced coordinator not initialized' };
             }
             
             try {
-                const systemInfo = await this.coordinator.statusManager.getDetailedSystemInfo();
-                const coordinationInfo = this.coordinator.statusManager.extractCoordinationInfo(systemInfo);
+                const systemInfo = await this.coordinator.getDetailedSystemInfo();
+                const coordinationInfo = this.coordinator.extractCoordinationInfo(systemInfo);
                 
                 return {
-                    publicKey: this.coordinator.keyManager.publicKey,
-                    shortId: this.coordinator.keyManager.publicKey.substring(0, 8),
+                    publicKey: this.coordinator.publicKey,
+                    shortId: this.coordinator.publicKey.substring(0, 8),
                     networkId: this.coordinator.getNetworkId(),
                     appIdentifier: this.coordinator.appIdentifier,
                     appVersion: this.coordinator.appVersion,
@@ -423,54 +467,65 @@ class MachineCoordinationApp {
                     performance: coordinationInfo.performance,
                     networkInfo: coordinationInfo.networkInfo,
                     systemSummary: coordinationInfo.systemSummary,
-                    healthScore: await this.coordinator.statusManager.getSystemHealthScore(),
-                    capabilityScore: await this.coordinator.statusManager.getMachineCapabilityScore()
+                    healthScore: await this.coordinator.getSystemHealthScore(),
+                    capabilityScore: await this.coordinator.getMachineCapabilityScore(),
+                    enhanced: true
                 };
             } catch (error) {
-                console.error('Failed to get my info:', error);
+                console.error('Failed to get enhanced my info:', error);
                 return { error: error.message };
             }
         });
 
         ipcMain.handle('coordinator:get-connection-stats', async () => {
             if (!this.coordinator) {
-                return { error: 'Coordinator not initialized' };
+                return { error: 'Enhanced coordinator not initialized' };
             }
             
             try {
-                const networkStats = this.coordinator.statusManager.getNetworkStatistics();
-                const relayStats = this.coordinator.relays.map(relay => ({
-                    url: relay.url,
-                    connected: relay.connected,
-                    reconnectAttempts: relay.reconnectAttempts
-                }));
+                const networkStats = this.coordinator.getNetworkStatistics();
                 
                 return {
                     networkStats: networkStats,
-                    relayStats: relayStats,
                     verifiedPeers: this.coordinator.verifiedPeers.size,
+                    connectedMachines: this.coordinator.connectedMachines.size,
                     isolatedMode: this.coordinator.isolatedMode,
-                    lastPeerContact: this.coordinator.lastPeerContact
+                    lastPeerContact: this.coordinator.lastPeerContact,
+                    enhanced: true
                 };
             } catch (error) {
-                console.error('Failed to get connection stats:', error);
+                console.error('Failed to get enhanced connection stats:', error);
                 return { error: error.message };
             }
         });
 
         ipcMain.handle('coordinator:refresh-network', async () => {
             if (!this.coordinator) {
-                throw new Error('Coordinator not initialized');
+                throw new Error('Enhanced coordinator not initialized');
             }
             
             try {
                 await this.coordinator.broadcastAppVerification();
                 await this.coordinator.pingKnownPeers();
+                await this.coordinator.sendAnnouncement();
                 this.updateNetworkStats();
-                return { success: true };
+                return { success: true, enhanced: true };
             } catch (error) {
-                console.error('Failed to refresh network:', error);
+                console.error('Failed to refresh enhanced network:', error);
                 throw new Error(`Failed to refresh network: ${error.message}`);
+            }
+        });
+
+        ipcMain.handle('coordinator:get-network-statistics', async () => {
+            if (!this.coordinator) {
+                return { error: 'Enhanced coordinator not initialized' };
+            }
+            
+            try {
+                return this.coordinator.getNetworkStatistics();
+            } catch (error) {
+                console.error('Failed to get network statistics:', error);
+                return { error: error.message };
             }
         });
 
@@ -502,16 +557,16 @@ class MachineCoordinationApp {
     }
 
     async cleanup() {
-        console.log('🧹 Cleaning up application...');
+        console.log('🧹 Cleaning up enhanced application...');
         
         if (this.coordinator) {
             try {
-                console.log('📤 Broadcasting offline status...');
-                await this.coordinator.reportMachineOffline(this.coordinator.keyManager.publicKey);
+                console.log('📤 Broadcasting enhanced offline status...');
+                await this.coordinator.reportMachineOffline(this.coordinator.publicKey);
                 await this.coordinator.shutdown();
-                console.log('✅ Coordinator shutdown complete');
+                console.log('✅ Enhanced coordinator shutdown complete');
             } catch (error) {
-                console.error('❌ Error during coordinator shutdown:', error);
+                console.error('❌ Error during enhanced coordinator shutdown:', error);
             }
         }
 
@@ -520,10 +575,10 @@ class MachineCoordinationApp {
             this.tray = null;
         }
 
-        console.log('✅ Application cleanup complete');
+        console.log('✅ Enhanced application cleanup complete');
     }
 }
 
-const coordinationApp = new MachineCoordinationApp();
+const enhancedCoordinationApp = new EnhancedMachineCoordinationApp();
 
-module.exports = MachineCoordinationApp;
+module.exports = EnhancedMachineCoordinationApp;
